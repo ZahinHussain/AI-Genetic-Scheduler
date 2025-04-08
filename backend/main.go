@@ -1,12 +1,14 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver + stdlib adapter
 
 	// Import using relative path
 	"api/auth"
 	"api/db"
+	"api/tasks"
 )
 
 func main() {
@@ -15,6 +17,16 @@ func main() {
 	defer db.CloseDB()
 
 	router := gin.Default()
+
+	// Configure CORS middleware
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           86400, // 24 hours
+	}))
 
 	// Setup basic route
 	router.GET("/ping", func(c *gin.Context) {
@@ -25,6 +37,7 @@ func main() {
 
 	// Setup auth routes - no need to pass db connection
 	auth.SetupRoutes(router)
+	tasks.SetupRoutes(router)
 
 	// Start server
 	router.Run() // listen and serve on 0.0.0.0:8080
