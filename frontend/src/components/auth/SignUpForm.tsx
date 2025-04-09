@@ -4,11 +4,151 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 
 export default function SignUpForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Form data state - Removed firstName and lastName
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  });
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Check if user is already logged in
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          router.push('/home');
+          return;
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  // Form validation - Removed firstName and lastName checks
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError("Email is required");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+
+    if (!formData.password) {
+      setError("Password is required");
+      return false;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return false;
+    }
+
+    if (!isChecked) {
+      setError("You must agree to the Terms and Conditions");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!validateForm()) return;
+
+    try {
+      setIsLoading(true);
+      // Payload already only includes email and password
+      const requestPayload = {
+        email: formData.email,
+        password: formData.password
+      };
+
+      console.log('Sending signup request with payload:', JSON.stringify(requestPayload));
+
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestPayload),
+        credentials: 'include',
+      });
+
+      console.log('Received response with status:', response.status);
+      const responseClone = response.clone(); // Clone before reading body
+
+      let data;
+      try {
+        data = await response.json();
+        console.log('Response parsed as JSON:', data);
+      } catch (jsonError) {
+        const textResponse = await responseClone.text();
+        console.error('Failed to parse response as JSON:', jsonError);
+        console.error('Raw response:', textResponse);
+        throw new Error("Server returned an invalid response format. Please try again later.");
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || `Signup failed with status ${response.status}`);
+      }
+
+      // Store user data if provided by backend
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('User data stored in localStorage.');
+      }
+
+      console.log('Signup successful, redirecting to login page');
+      router.push('/signin'); // Redirect to the sign in page after successful signup
+
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Optional: Show a loading indicator while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="flex flex-col flex-1 justify-center items-center min-h-screen">
+        <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -83,55 +223,42 @@ export default function SignUpForm() {
                 </span>
               </div>
             </div>
-            <form>
+            {error && (
+              <div className="mb-4 p-3 text-sm bg-red-100 border border-red-200 text-red-600 rounded-lg">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit}>
               <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      First Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Last Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
+                 {/* Removed First Name and Last Name Input fields */}
+                 
                 {/* <!-- Email --> */}
                 <div>
-                  <Label>
+                  <Label htmlFor="email">
                     Email<span className="text-error-500">*</span>
                   </Label>
                   <Input
                     type="email"
                     id="email"
                     name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     placeholder="Enter your email"
                   />
                 </div>
                 {/* <!-- Password --> */}
                 <div>
-                  <Label>
+                  <Label htmlFor="password">
                     Password<span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
                     <Input
+                      id="password"
+                      name="password"
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -165,8 +292,12 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    Sign Up
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Processing..." : "Sign Up"}
                   </button>
                 </div>
               </div>
@@ -174,10 +305,10 @@ export default function SignUpForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Already have an account?
+                Already have an account?{" "}
                 <Link
                   href="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  className="ml-1 font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400" // Added ml-1 for spacing
                 >
                   Sign In
                 </Link>
