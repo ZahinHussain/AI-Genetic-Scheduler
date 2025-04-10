@@ -25,11 +25,11 @@ func InitDB() {
 		}
 
 		// Get database connection details from environment variables
-		host := getEnv("DB_HOST", "localhost")
+		host := getEnv("DB_HOST", "db")
 		port := getEnv("DB_PORT", "5432")
-		user := getEnv("DB_USER", "postgres")
+		user := getEnv("DB_USER", "chronomind")
 		password := getEnv("DB_PASSWORD", "")
-		dbname := getEnv("DB_NAME", "scheduler")
+		dbname := getEnv("DB_NAME", "chronomind")
 		sslmode := getEnv("DB_SSLMODE", "disable")
 
 		// Create connection string
