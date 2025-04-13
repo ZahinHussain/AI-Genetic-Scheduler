@@ -27,9 +27,9 @@ const (
 type TaskType string
 
 const (
-	TaskTypeOneOff      TaskType = "one_off"
-	TaskTypeRecurring   TaskType = "recurring"
-	TaskTypeAppointment TaskType = "appointment"
+	TaskTypeOneOff    TaskType = "one_off"
+	TaskTypeRecurring TaskType = "recurring"
+
 	// Add other task types as needed
 )
 

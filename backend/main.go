@@ -8,7 +8,8 @@ import (
 	// Import using relative path
 	"api/auth"
 	"api/db"
-	"api/tasks"
+	"api/oneofftasks"
+	"api/recurringtasks"
 )
 
 func main() {
@@ -37,7 +38,9 @@ func main() {
 
 	// Setup auth routes - no need to pass db connection
 	auth.SetupRoutes(router)
-	tasks.SetupRoutes(router)
+	//tasks.SetupRoutes(router)
+	recurringtasks.SetupRoutes(router) // Setup recurring tasks routes
+	oneofftasks.SetupRoutes(router)
 
 	// Start server
 	router.Run() // listen and serve on 0.0.0.0:8080
