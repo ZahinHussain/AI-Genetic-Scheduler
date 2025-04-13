@@ -2,8 +2,8 @@
 
 import React from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import TaskInputForm from "@/components/form/form-elements/AddElements";
-import TaskList from "@/components/tables/tasksTable";
+import TaskInputForm from "@/components/form/form-elements/AddOneOffTask";
+import TaskList from "@/components/tables/oneOfTask"
 
 // Define the expected structure of task data received from the form
 interface TaskFormData {

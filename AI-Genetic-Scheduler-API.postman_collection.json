@@ -1,0 +1,545 @@
+{
+  "info": {
+    "name": "AI Genetic Scheduler API",
+    "description": "API collection for testing the AI Genetic Scheduler application endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new user"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login and get JWT token"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "user"]
+            },
+            "description": "Get current user information"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout user and invalidate token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "One-off Tasks",
+      "description": "Endpoints for managing one-off tasks",
+      "item": [
+        {
+          "name": "Get All One-off Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/oneofftasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "oneofftasks"]
+            },
+            "description": "Get all one-off tasks for the current user"
+          }
+        },
+        {
+          "name": "Get One-off Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/oneofftasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "oneofftasks", "1"]
+            },
+            "description": "Get a specific one-off task by ID"
+          }
+        },
+        {
+          "name": "Create One-off Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"Mon\",\n  \"end_date\": \"Mon\",\n  \"event_start_time\": \"09:00:00\",\n  \"event_end_time\": \"17:30:00\",\n  \"category_id\": null,\n  \"title\": \"Weekly Team Meeting\",\n  \"description\": \"Regular team sync-up to discuss project progress and blockers\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/oneofftasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "oneofftasks"]
+            },
+            "description": "Create a new one-off task"
+          }
+        },
+        {
+          "name": "Update One-off Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"Mon\",\n  \"end_date\": \"Mon\",\n  \"event_start_time\": \"10:00:00\",\n  \"event_end_time\": \"16:30:00\",\n  \"category_id\": null,\n  \"title\": \"Updated Team Meeting\",\n  \"description\": \"Updated description for the team meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/oneofftasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "oneofftasks", "1"]
+            },
+            "description": "Update an existing one-off task"
+          }
+        },
+        {
+          "name": "Delete One-off Task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/oneofftasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "oneofftasks", "1"]
+            },
+            "description": "Delete a one-off task"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recurring Tasks",
+      "description": "Endpoints for managing recurring tasks",
+      "item": [
+        {
+          "name": "Get All Recurring Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recurringtasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recurringtasks"]
+            },
+            "description": "Get all recurring tasks for the current user"
+          }
+        },
+        {
+          "name": "Get Recurring Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recurringtasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recurringtasks", "1"]
+            },
+            "description": "Get a specific recurring task by ID"
+          }
+        },
+        {
+          "name": "Create Recurring Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"Mon\",\n  \"end_date\": \"Mon\",\n  \"event_start_time\": \"09:00:00\",\n  \"event_end_time\": \"10:30:00\",\n  \"category_id\": null,\n  \"constraint\": \"fixed\",\n  \"title\": \"Weekly Team Meeting\",\n  \"description\": \"Regular synchronization meeting with the development team\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/recurringtasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recurringtasks"]
+            },
+            "description": "Create a new recurring task"
+          }
+        },
+        {
+          "name": "Update Recurring Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"Mon\",\n  \"end_date\": \"Mon\",\n  \"event_start_time\": \"09:30:00\",\n  \"event_end_time\": \"11:00:00\",\n  \"category_id\": null,\n  \"constraint\": \"flexible\",\n  \"title\": \"Updated Team Meeting\",\n  \"description\": \"Updated description for the weekly team meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/recurringtasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recurringtasks", "1"]
+            },
+            "description": "Update an existing recurring task"
+          }
+        },
+        {
+          "name": "Delete Recurring Task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recurringtasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recurringtasks", "1"]
+            },
+            "description": "Delete a recurring task"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "description": "Endpoints for managing task categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Get all task categories for the current user"
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "1"]
+            },
+            "description": "Get a specific category by ID"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Work\",\n  \"color\": \"#FF5733\",\n  \"description\": \"Work-related tasks\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Create a new category"
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Work\",\n  \"color\": \"#3357FF\",\n  \"description\": \"Updated description for work-related tasks\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "1"]
+            },
+            "description": "Update an existing category"
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "1"]
+            },
+            "description": "Delete a category"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule Generation",
+      "description": "Endpoints for generating and managing schedules",
+      "item": [
+        {
+          "name": "Generate Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2023-09-01\",\n  \"end_date\": \"2023-09-07\",\n  \"include_recurring\": true,\n  \"include_oneoff\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "generate"]
+            },
+            "description": "Generate a new schedule based on tasks"
+          }
+        },
+        {
+          "name": "Get Current Schedule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "current"]
+            },
+            "description": "Get the current active schedule"
+          }
+        },
+        {
+          "name": "Get Schedule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "1"]
+            },
+            "description": "Get a specific schedule by ID"
+          }
+        },
+        {
+          "name": "Delete Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "1"]
+            },
+            "description": "Delete a schedule"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
