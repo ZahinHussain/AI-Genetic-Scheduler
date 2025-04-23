@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -73,7 +74,7 @@ type Task struct {
 type OneOffTask struct {
 	OneOffTaskID    int        `json:"one_off_task_id"`
 	UserID          int        `json:"user_id"`
-	Deadline        time.Time  `json:"deadline" binding:"required"`
+	Deadline        *time.Time `json:"deadline"`
 	DurationMinutes int        `json:"duration_minutes"` // Optional, but useful for scheduling
 	CategoryID      *int       `json:"category_id"`      // Optional field
 	Constraint      string     `json:"constraint"`
@@ -140,7 +141,7 @@ func GetOneOffTasks(c *gin.Context) {
 		var description sql.NullString
 		var updatedAt sql.NullTime
 		var durationMinutes sql.NullInt32
-		var constraint string
+		var constraint sql.NullString
 
 		if err := rows.Scan(
 			&t.OneOffTaskID,
@@ -171,6 +172,20 @@ func GetOneOffTasks(c *gin.Context) {
 		}
 		if durationMinutes.Valid {
 			t.DurationMinutes = int(durationMinutes.Int32)
+		}
+
+		if constraint.Valid && constraint.String != "" {
+			// Check if it's a valid constraint value
+			switch Constraint(constraint.String) {
+			case Hard, Soft:
+				t.Constraint = constraint.String
+			default:
+				// Invalid constraint value, use default
+				t.Constraint = string(Soft)
+			}
+		} else {
+			// NULL or empty constraint, use default
+			t.Constraint = string(Soft)
 		}
 
 		tasks = append(tasks, t)
@@ -221,10 +236,9 @@ func GetOneOffTask(c *gin.Context) {
 	// Prepare the SQL query
 	query := `
 	SELECT "one_off_task_id", "user_id", "deadline", "duration_minutes", 
-		       "category_id","constraint", "title", "description", "created_at", "updated_at"
-
-		FROM "OneOffTasks"
-		WHERE "one_off_task_id" = $1 AND "user_id" = $2;
+	       "category_id", "constraint", "title", "description", "created_at", "updated_at"
+	FROM "OneOffTasks"
+	WHERE "one_off_task_id" = $1 AND "user_id" = $2;
 	`
 
 	var t OneOffTask
@@ -232,6 +246,7 @@ func GetOneOffTask(c *gin.Context) {
 	var description sql.NullString
 	var updatedAt sql.NullTime
 	var durationMinutes sql.NullInt32
+	var constraint sql.NullString
 
 	err = database.QueryRow(query, taskID, userID).Scan(
 		&t.OneOffTaskID,
@@ -239,6 +254,7 @@ func GetOneOffTask(c *gin.Context) {
 		&t.Deadline,
 		&durationMinutes,
 		&categoryID,
+		&constraint, // Added missing constraint field scan
 		&t.Title,
 		&description,
 		&t.CreatedAt,
@@ -270,6 +286,21 @@ func GetOneOffTask(c *gin.Context) {
 		t.DurationMinutes = int(durationMinutes.Int32)
 	}
 
+	// Handle constraint value - use your custom type
+	if constraint.Valid && constraint.String != "" {
+		// Check if it's a valid constraint value
+		switch Constraint(constraint.String) {
+		case Hard, Soft:
+			t.Constraint = constraint.String
+		default:
+			// Invalid constraint value, use default
+			t.Constraint = string(Soft)
+		}
+	} else {
+		// NULL or empty constraint, use default
+		t.Constraint = string(Soft)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"one_off_task": t,
 	})
@@ -296,34 +327,87 @@ func CreateOneOffTask(c *gin.Context) {
 
 	log.Printf("[DEBUG] CreateOneOffTask: Creating one-off task for userID: %v", userID)
 
-	// Define a structure to bind the request data
-	var taskRequest OneOffTask
-
-	if err := c.ShouldBindJSON(&taskRequest); err != nil {
+	// Get raw data first to check the deadline value
+	var rawData map[string]interface{}
+	if err := c.ShouldBindJSON(&rawData); err != nil {
 		log.Printf("[DEBUG] CreateOneOffTask: Invalid JSON data: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Set the user ID on the task
-	taskRequest.UserID = userID
-
-	// Set default values
-	taskRequest.CreatedAt = time.Now()
+	// Create a task with defaults
+	taskRequest := OneOffTask{
+		UserID:    userID,
+		CreatedAt: time.Now(),
+	}
 	now := time.Now()
 	taskRequest.UpdatedAt = &now
 
-	// Validate required fields
-	if taskRequest.Title == "" {
-		log.Printf("[ERROR] CreateOneOffTask: Missing title")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
-		return
+	// Process fields from raw data
+	// Check for deadline - special handling for NULL string
+	if deadline, exists := rawData["deadline"]; exists {
+		if deadline == nil {
+			taskRequest.Deadline = nil
+		} else if deadlineStr, ok := deadline.(string); ok {
+			if strings.EqualFold(deadlineStr, "null") || deadlineStr == "" {
+				taskRequest.Deadline = nil
+			} else {
+				parsedTime, err := time.Parse(time.RFC3339, deadlineStr)
+				if err != nil {
+					log.Printf("[DEBUG] CreateOneOffTask: Invalid deadline format: %v - setting to null", err)
+					taskRequest.Deadline = nil
+				} else {
+					taskRequest.Deadline = &parsedTime
+				}
+			}
+		}
 	}
 
-	if taskRequest.Deadline.IsZero() {
-		log.Printf("[ERROR] CreateOneOffTask: Missing deadline")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Deadline is required"})
-		return
+	// Process title
+	if title, exists := rawData["title"]; exists && title != nil {
+		if titleStr, ok := title.(string); ok && titleStr != "" {
+			taskRequest.Title = titleStr
+		}
+	}
+
+	// Process description
+	if description, exists := rawData["description"]; exists && description != nil {
+		if descStr, ok := description.(string); ok {
+			taskRequest.Description = descStr
+		}
+	}
+
+	// Process duration_minutes
+	if duration, exists := rawData["duration_minutes"]; exists && duration != nil {
+		if durationFloat, ok := duration.(float64); ok {
+			taskRequest.DurationMinutes = int(durationFloat)
+		}
+	}
+
+	// Process category_id
+	if categoryID, exists := rawData["category_id"]; exists {
+		if categoryID == nil {
+			taskRequest.CategoryID = nil
+		} else if categoryFloat, ok := categoryID.(float64); ok && categoryFloat > 0 {
+			catID := int(categoryFloat)
+			taskRequest.CategoryID = &catID
+		}
+	}
+
+	// Process constraint
+	if constraint, exists := rawData["constraint"]; exists && constraint != nil {
+		if constraintStr, ok := constraint.(string); ok && constraintStr != "" {
+			taskRequest.Constraint = constraintStr
+		} else {
+			taskRequest.Constraint = "hard" // Default
+		}
+	} else {
+		taskRequest.Constraint = "hard" // Default
+	}
+
+	// Validate title
+	if taskRequest.Title == "" {
+		taskRequest.Title = "Untitled Task" // Provide default title
 	}
 
 	// Get database connection
@@ -568,6 +652,7 @@ func DeleteOneOffTask(c *gin.Context) {
 		"message": "One-off task deleted successfully",
 	})
 }
+
 // SetupRoutes configures the routes for one-off tasks
 func SetupRoutes(router *gin.Engine) {
 	log.Printf("[DEBUG] OneOffTasks: Setting up one-off tasks routes...")

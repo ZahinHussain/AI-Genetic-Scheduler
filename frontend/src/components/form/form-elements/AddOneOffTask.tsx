@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useMemo } from 'react';
 import Label from '../Label';
@@ -36,7 +37,7 @@ const parseISODateTime = (isoString: string | undefined): { date: Date, time: st
 
 // Define the structure for the one-off task data - exact match to the API's expected format
 interface OneOffTaskData {
-  deadline: string;           // ISO date string "2023-12-20T16:00:00Z"
+  deadline: string | null;    // ISO date string "2023-12-20T16:00:00Z" or null
   duration_minutes: number;   // Duration in minutes (e.g., 120)
   category_id: number | null; // Optional category ID
   constraint: string;         // Constraint type (e.g., "hard", "soft", "")
@@ -58,7 +59,7 @@ export default function AddOneOffTask({
 
   // Sample initial data for defaults
   const sampleData: OneOffTaskData = {
-    deadline: "2023-12-20T16:00:00Z",
+    deadline: null,
     duration_minutes: 120,
     category_id: null,
     constraint: "hard",
@@ -68,16 +69,22 @@ export default function AddOneOffTask({
   
   // Calculate default values
   const defaultDateTime = useMemo(() => {
-    // Parse the sample deadline or use tomorrow
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const { date, time } = parseISODateTime(initialTaskData.deadline || sampleData.deadline);
+    // Only parse deadline if it exists in initialTaskData
+    if (initialTaskData.deadline) {
+      const { date, time } = parseISODateTime(initialTaskData.deadline);
+      return {
+        date,
+        time,
+        duration: initialTaskData.duration_minutes || sampleData.duration_minutes
+      };
+    }
     
+    // Otherwise use current date/time
     return {
-      date,
-      time,
+      date: now,
+      time: formatTimeForInput(now),
       duration: initialTaskData.duration_minutes || sampleData.duration_minutes
     };
   }, [initialTaskData.deadline]);
@@ -95,10 +102,14 @@ export default function AddOneOffTask({
     initialTaskData.constraint !== undefined ? initialTaskData.constraint : sampleData.constraint
   );
   
-  // Date and time for the deadline
-  const { date: parsedDate, time: parsedTime } = parseISODateTime(initialTaskData.deadline);
-  const [deadlineDate, setDeadlineDate] = useState<Date>(parsedDate);
-  const [deadlineTime, setDeadlineTime] = useState<string>(parsedTime);
+  // Date and time for the deadline - null by default unless provided in initialTaskData
+  const [hasDeadline, setHasDeadline] = useState<boolean>(!!initialTaskData.deadline);
+  const [deadlineDate, setDeadlineDate] = useState<Date>(
+    initialTaskData.deadline ? parseISODateTime(initialTaskData.deadline).date : new Date()
+  );
+  const [deadlineTime, setDeadlineTime] = useState<string>(
+    initialTaskData.deadline ? parseISODateTime(initialTaskData.deadline).time : formatTimeForInput(new Date())
+  );
 
   // --- Handle form submission ---
   const handleSubmit = async (event: React.FormEvent) => {
@@ -110,18 +121,14 @@ export default function AddOneOffTask({
       return;
     }
 
-
     if (!duration || duration <= 0) {
       toast.error('Please enter a valid duration');
       return;
     }
 
-    // Create the ISO datetime string for the deadline
-    const deadlineISO = createISODateTime(deadlineDate, deadlineTime);
-
     // Create the task data object - exactly matching the expected API format
     const taskData: OneOffTaskData = {
-      deadline: deadlineISO,
+      deadline: hasDeadline ? createISODateTime(deadlineDate, deadlineTime) : null,
       duration_minutes: duration,
       category_id: categoryId,
       constraint: constraint,
@@ -158,8 +165,7 @@ export default function AddOneOffTask({
       setDescription('');
       setCategoryId(null);
       setDuration(defaultDateTime.duration);
-
-
+      setHasDeadline(false);
       setConstraint('hard'); // Default to hard constraint
       
     } catch (error) {
@@ -208,41 +214,58 @@ export default function AddOneOffTask({
           />
         </div>
 
-        {/* Deadline Date */}
-        <div>
-          <Label htmlFor="deadline-date">Deadline Date</Label>
-          <DatePicker
-            id="deadline-date"
-            value={deadlineDate}
-            options={{
-              dateFormat: "Y-m-d",
-              defaultDate: deadlineDate,
-              minDate: "today",
-            }}
-            placeholder="YYYY-MM-DD"
-            onChange={handleDateChange}
-            className="dark:bg-dark-900 w-full"
-          />
-        </div>
-
-        {/* Deadline Time */}
-        <div>
-          <Label htmlFor="deadline-time">Deadline Time</Label>
-          <div className="relative">
-            <Input
-              id="deadline-time"
-              type="time"
-              name="deadlineTime"
-              value={deadlineTime}
-              onChange={(e) => setDeadlineTime(e.target.value)}
-              className="pr-10 w-full"
-              required
+        {/* Optional Deadline Toggle */}
+        <div className="md:col-span-2">
+          <div className="flex items-center mb-2">
+            <input
+              id="has-deadline"
+              type="checkbox"
+              checked={hasDeadline}
+              onChange={(e) => setHasDeadline(e.target.checked)}
+              className="w-4 h-4 mr-2 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
-            <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-              <ClockIcon className="h-5 w-5" />
-            </span>
+            <Label htmlFor="has-deadline">Set a deadline for this task</Label>
           </div>
         </div>
+
+        {/* Deadline Date and Time (only shown if hasDeadline is true) */}
+        {hasDeadline && (
+          <>
+            <div>
+              <Label htmlFor="deadline-date">Deadline Date</Label>
+              <DatePicker
+                id="deadline-date"
+                value={deadlineDate}
+                options={{
+                  dateFormat: "Y-m-d",
+                  defaultDate: deadlineDate,
+                  minDate: "today",
+                }}
+                placeholder="YYYY-MM-DD"
+                onChange={handleDateChange}
+                className="dark:bg-dark-900 w-full"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="deadline-time">Deadline Time</Label>
+              <div className="relative">
+                <Input
+                  id="deadline-time"
+                  type="time"
+                  name="deadlineTime"
+                  value={deadlineTime}
+                  onChange={(e) => setDeadlineTime(e.target.value)}
+                  className="pr-10 w-full"
+                  required={hasDeadline}
+                />
+                <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                  <ClockIcon className="h-5 w-5" />
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Duration in Minutes */}
         <div>
@@ -302,7 +325,6 @@ export default function AddOneOffTask({
           </div>
         </div>
       </div>
-
 
       {/* Submit Button */}
       <div className="flex justify-center">

@@ -84,6 +84,7 @@ type RecurringTask struct {
 
 // GetRecurringTask retrieves a single recurring task by ID
 
+// GetRecurringTasks retrieves all recurring tasks for the authenticated user
 func GetRecurringTasks(c *gin.Context) {
 	// Enhanced debugging
 	log.Printf("[DEBUG] GetRecurringTasks: Request received from %s for %s %s",
@@ -107,7 +108,7 @@ func GetRecurringTasks(c *gin.Context) {
 
 	log.Printf("[DEBUG] GetRecurringTasks: Authenticated userID: %v", userID)
 
-	// Prepare the SQL query to match the actual table schema (11 columns, no constraint column)
+	// Updated SQL query to include constraint column
 	query := `
 		SELECT 
 			"recurring_task_id", 
@@ -117,6 +118,7 @@ func GetRecurringTasks(c *gin.Context) {
 			"event_start_time", 
 			"event_end_time", 
 			"category_id", 
+			"constraint",
 			"title", 
 			"description", 
 			"created_at", 
@@ -151,6 +153,7 @@ func GetRecurringTasks(c *gin.Context) {
 		var updatedAt sql.NullTime
 		var endDate sql.NullString
 		var startDateStr string
+		var constraintStr sql.NullString
 
 		if err := rows.Scan(
 			&t.RecurringTaskID, // 1. recurring_task_id
@@ -160,10 +163,11 @@ func GetRecurringTasks(c *gin.Context) {
 			&t.EventStartTime,  // 5. event_start_time
 			&t.EventEndTime,    // 6. event_end_time
 			&categoryID,        // 7. category_id
-			&t.Title,           // 8. title
-			&description,       // 9. description
-			&t.CreatedAt,       // 10. created_at
-			&updatedAt,         // 11. updated_at
+			&constraintStr,     // 8. constraint
+			&t.Title,           // 9. title
+			&description,       // 10. description
+			&t.CreatedAt,       // 11. created_at
+			&updatedAt,         // 12. updated_at
 		); err != nil {
 			log.Printf("[ERROR] GetRecurringTasks: Row scan failed: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -189,7 +193,20 @@ func GetRecurringTasks(c *gin.Context) {
 		// Convert string to DayOfWeek type
 		t.StartDate = DayOfWeek(startDateStr)
 
-		// Removed constraint handling as it's not in the table schema
+		// Handle constraint value
+		if constraintStr.Valid && constraintStr.String != "" {
+			// Check if it's a valid constraint value
+			switch Constraint(constraintStr.String) {
+			case Hard, Soft:
+				t.Constraint = Constraint(constraintStr.String)
+			default:
+				// Invalid constraint value, use default
+				t.Constraint = Hard
+			}
+		} else {
+			// NULL or empty constraint, use default
+			t.Constraint = Hard
+		}
 
 		tasks = append(tasks, t)
 	}
@@ -207,8 +224,7 @@ func GetRecurringTasks(c *gin.Context) {
 	})
 }
 
-// GetRecurringTasks retrieves all recurring tasks for a user
-
+// GetRecurringTask retrieves a single recurring task by ID
 func GetRecurringTask(c *gin.Context) {
 	// Enhanced debugging
 	log.Printf("[DEBUG] GetRecurringTask: Request received from %s for %s %s",
@@ -241,7 +257,7 @@ func GetRecurringTask(c *gin.Context) {
 
 	log.Printf("[DEBUG] GetRecurringTask: Authenticated userID: %v, taskID: %v", userID, taskID)
 
-	// Prepare the SQL query to match the actual table schema (11 columns, no constraint column)
+	// Updated SQL query to include constraint column
 	query := `
 		SELECT 
 			"recurring_task_id", 
@@ -251,6 +267,7 @@ func GetRecurringTask(c *gin.Context) {
 			"event_start_time", 
 			"event_end_time", 
 			"category_id", 
+			"constraint",
 			"title", 
 			"description", 
 			"created_at", 
@@ -274,6 +291,7 @@ func GetRecurringTask(c *gin.Context) {
 	var updatedAt sql.NullTime
 	var endDate sql.NullString
 	var startDateStr string
+	var constraintStr sql.NullString
 
 	// Execute the query - use QueryRow for single row result
 	err = database.QueryRow(query, userID, taskID).Scan(
@@ -284,10 +302,11 @@ func GetRecurringTask(c *gin.Context) {
 		&t.EventStartTime,  // 5. event_start_time
 		&t.EventEndTime,    // 6. event_end_time
 		&categoryID,        // 7. category_id
-		&t.Title,           // 8. title
-		&description,       // 9. description
-		&t.CreatedAt,       // 10. created_at
-		&updatedAt,         // 11. updated_at
+		&constraintStr,     // 8. constraint
+		&t.Title,           // 9. title
+		&description,       // 10. description
+		&t.CreatedAt,       // 11. created_at
+		&updatedAt,         // 12. updated_at
 	)
 
 	if err != nil {
@@ -319,6 +338,21 @@ func GetRecurringTask(c *gin.Context) {
 
 	// Convert string to DayOfWeek type
 	t.StartDate = DayOfWeek(startDateStr)
+
+	// Handle constraint value
+	if constraintStr.Valid && constraintStr.String != "" {
+		// Check if it's a valid constraint value
+		switch Constraint(constraintStr.String) {
+		case Hard, Soft:
+			t.Constraint = Constraint(constraintStr.String)
+		default:
+			// Invalid constraint value, use default
+			t.Constraint = Hard
+		}
+	} else {
+		// NULL or empty constraint, use default
+		t.Constraint = Hard
+	}
 
 	log.Printf("[DEBUG] GetRecurringTask: Successfully retrieved task with ID %d", taskID)
 
