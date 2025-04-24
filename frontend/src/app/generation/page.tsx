@@ -59,6 +59,19 @@ export default function Generation() {
       return;
     }
     
+    // Create a JSON object with the selected task IDs
+    const selectedTasks = {
+      recurring: selectedRecurringIds.length > 0 ? selectedRecurringIds : [],
+      oneOff: selectedOneOffIds.length > 0 ? selectedOneOffIds : []
+    };
+    
+    // Print the JSON to console
+    console.log("Selected Tasks JSON:");
+    console.log(JSON.stringify(selectedTasks, null, 2));
+    
+    // Also display in an alert for immediate visibility
+    alert("Selected Tasks JSON:\n" + JSON.stringify(selectedTasks, null, 2));
+    
     // Create query parameters with selected task IDs
     const params = new URLSearchParams();
     
@@ -70,9 +83,9 @@ export default function Generation() {
       params.append('oneoff', selectedOneOffIds.join(','));
     }
     
-    // Navigate to results page with query parameters
-    router.push(`/results?${params.toString()}`);
+ 
   };
+
 
   return (
     <div className="min-h-screen bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 px-5 py-7 xl:px-10 xl:py-12 rounded-xs">

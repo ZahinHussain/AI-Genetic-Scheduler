@@ -8,6 +8,7 @@ import (
 	// Import using relative path
 	"api/auth"
 	"api/db"
+	"api/ga"
 	"api/oneofftasks"
 	"api/recurringtasks"
 )
@@ -41,6 +42,7 @@ func main() {
 	//tasks.SetupRoutes(router)
 	recurringtasks.SetupRoutes(router) // Setup recurring tasks routes
 	oneofftasks.SetupRoutes(router)
+	ga.SetupRoutes(router) // Setup GA routes
 
 	// Start server
 	router.Run() // listen and serve on 0.0.0.0:8080
