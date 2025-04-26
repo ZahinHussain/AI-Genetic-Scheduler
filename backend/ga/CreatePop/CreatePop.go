@@ -1,9 +1,9 @@
 package CreatePop
 
 import (
-	"GA_2/Tasks"
-	"GA_2/utils/random"
-	"GA_2/utils/timeUtils"
+	"api/ga/Tasks"
+	"api/ga/utils/random"
+	"api/ga/utils/timeUtils"
 	"fmt"
 )
 
@@ -35,7 +35,7 @@ var softList []Soft
 This will be used to calculate all the hard constraints for reccuring and one of this will make sure it in the 1t standard
 */
 
-func CalculateHardSlots(createRT []Tasks.RecurringTask, createOFT []Tasks.OneOffTask) int {
+func CalculateHardSlots(createRT []Tasks.RecurringTaskGA, createOFT []Tasks.OneOffTaskGA) int {
 	var slots = 0
 	var hardSlots = 0
 	for i := 0; i < len(createRT); i++ {
@@ -56,7 +56,7 @@ func CalculateHardSlots(createRT []Tasks.RecurringTask, createOFT []Tasks.OneOff
 	return slots
 }
 
-func CalcualteSoftSlots(createRT []Tasks.RecurringTask, createOFT []Tasks.OneOffTask) int {
+func CalcualteSoftSlots(createRT []Tasks.RecurringTaskGA, createOFT []Tasks.OneOffTaskGA) int {
 	var slots = 0
 	var softSlots = 0
 
@@ -82,7 +82,7 @@ func CalcualteSoftSlots(createRT []Tasks.RecurringTask, createOFT []Tasks.OneOff
 	return slots
 }
 
-func SelectionWheelProb(day int) []int {
+func SelectionWheelProb(day int, RecuringTask []Tasks.RecurringTaskGA, OneOffTasks []Tasks.OneOffTaskGA) []int {
 	var population []int
 
 	// Prepare fresh lists for each run
@@ -90,8 +90,8 @@ func SelectionWheelProb(day int) []int {
 	softList = nil
 
 	// Calculate slots
-	_ = CalculateHardSlots(Tasks.CreateRecuringScheudle(), Tasks.CreateOneOffTask())
-	_ = CalcualteSoftSlots(Tasks.CreateRecuringScheudle(), Tasks.CreateOneOffTask())
+	_ = CalculateHardSlots(RecuringTask, OneOffTasks)
+	_ = CalcualteSoftSlots(RecuringTask, OneOffTasks)
 
 	// Calculate initial slot counts
 	totalHardSlots := 0
@@ -239,7 +239,7 @@ func selectFree(freeSlots *int, length int) (int, int, error) {
 
 // Select a soft task randomly
 
-func CreatePopulation(P int) []Individual {
+func CreatePopulation(P int, RecuringTask []Tasks.RecurringTaskGA, OneOffTasks []Tasks.OneOffTaskGA) []Individual {
 	// Initialize a slice to hold P individuals
 	population := make([]Individual, P)
 
@@ -249,7 +249,7 @@ func CreatePopulation(P int) []Individual {
 
 		// Create an individual with genes for the entire week
 		ind := Individual{
-			Gene:    SelectionWheelProb(maxDay * 7),
+			Gene:    SelectionWheelProb(maxDay*7, RecuringTask, OneOffTasks),
 			Fitness: 0,
 		}
 
@@ -261,9 +261,4 @@ func CreatePopulation(P int) []Individual {
 	}
 
 	return population
-}
-
-func main() {
-	fmt.Println(Tasks.CreateHardGene())
-
 }

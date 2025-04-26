@@ -2,340 +2,57 @@ package ga
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"api/auth" // Import auth package for authentication middleware
-	"api/db"   // Database connection
+	"api/db"
+
+	// Database connection
+	"api/ga/runga"
 )
+
+type TaskSubType string
+
+const (
+	TaskSubTypeOneOff    TaskSubType = "one_off"
+	TaskSubTypeRecurring TaskSubType = "recurring"
+)
+
+// ScheduledTask represents a task with scheduling information from GA algorithm
+type ScheduledTask struct {
+	ID          int       `json:"id"`
+	Title       string    `json:"title"`
+	StartDate   time.Time `json:"startDate"`
+	EndDate     time.Time `json:"endDate"`
+	TaskType    string    `json:"taskType"`
+	Description string    `json:"description"`
+}
+
+// TaskInstance represents a scheduled instance of a task in the database
+type TaskInstance struct {
+	InstanceID             int         `json:"instance_id"`
+	UserID                 int         `json:"user_id"`
+	GAGenerationID         int         `json:"ga_generation_id"`
+	TaskSourceID           int         `json:"task_source_id"`
+	TaskSourceType         TaskSubType `json:"task_source_type"`
+	ScheduledStartDatetime time.Time   `json:"scheduled_start_datetime"`
+	ScheduledEndDatetime   time.Time   `json:"scheduled_end_datetime"`
+	Title                  string      `json:"title"`
+	Description            string      `json:"description"`
+	CreatedAt              time.Time   `json:"created_at"`
+	UpdatedAt              *time.Time  `json:"updated_at"`
+}
 
 // TaskRequest represents the JSON structure for the GA route request
-type TaskRequest struct {
-	Recurring []int `json:"recurring"`
-	OneOff    []int `json:"oneOff"`
-}
-
-type Constraint string
-
-const (
-	Hard Constraint = "hard"
-	Soft Constraint = "soft"
-	// Add other task types as needed
-)
-
-// TaskStatus represents the status of a task
-type TaskStatus string
-
-const (
-	StatusPending   TaskStatus = "pending"
-	StatusCompleted TaskStatus = "completed"
-	StatusCancelled TaskStatus = "cancelled"
-	// Add other statuses as needed
-)
-
-// OneOffTask represents a one-off task with its specific fields
-type OneOffTask struct {
-	OneOffTaskID    int        `json:"one_off_task_id"`
-	UserID          int        `json:"user_id"`
-	Deadline        *time.Time `json:"deadline"`
-	DurationMinutes int        `json:"duration_minutes"`
-	CategoryID      *int       `json:"category_id"`
-	Constraint      string     `json:"constraint"`
-	Title           string     `json:"title"`
-	Description     string     `json:"description"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       *time.Time `json:"updated_at"`
-}
-
-type DayOfWeek string
-
-const (
-	Monday    DayOfWeek = "Mon"
-	Tuesday   DayOfWeek = "Tue"
-	Wednesday DayOfWeek = "Wed"
-	Thursday  DayOfWeek = "Thu"
-	Friday    DayOfWeek = "Fri"
-	Saturday  DayOfWeek = "Sat"
-	Sunday    DayOfWeek = "Sun"
-)
-
-// RecurringTask represents a recurring task with its specific fields
-type RecurringTask struct {
-	RecurringTaskID int        `json:"recurring_task_id"`
-	UserID          int        `json:"user_id"`
-	StartDate       DayOfWeek  `json:"start_date"`
-	EndDate         *DayOfWeek `json:"end_date"`         // Optional field
-	EventStartTime  string     `json:"event_start_time"` // Time format: HH:MM:SS
-	EventEndTime    string     `json:"event_end_time"`   // Time format: HH:MM:SS
-	CategoryID      *int       `json:"category_id"`      // Optional field
-	Constraint      Constraint `json:"constraint"`
-	Title           string     `json:"title"`
-	Description     string     `json:"description"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       *time.Time `json:"updated_at"` // Optional field
-}
-
-// GetTasksResult contains the results of fetching both recurring and one-off tasks
-type GetTasksResult struct {
-	RecurringTasks []RecurringTask `json:"recurring_tasks"`
-	OneOffTasks    []OneOffTask    `json:"one_off_tasks"`
-}
-
-// getTasksById retrieves both recurring and one-off tasks by their IDs
-func getTasksById(c *gin.Context, recurringIDs []int, oneOffIDs []int) (*GetTasksResult, error) {
-	// Get user ID from the authenticated user
-	userIDInter, exists := c.Get("userID")
-	if !exists {
-		return nil, fmt.Errorf("user not authenticated")
-	}
-
-	userID, ok := userIDInter.(int)
-	if !ok {
-		return nil, fmt.Errorf("invalid user ID")
-	}
-
-	// Get database connection
-	database := db.GetDB()
-	if database == nil {
-		return nil, fmt.Errorf("database connection error")
-	}
-
-	result := &GetTasksResult{
-		RecurringTasks: []RecurringTask{},
-		OneOffTasks:    []OneOffTask{},
-	}
-
-	// Fetch recurring tasks
-	if len(recurringIDs) > 0 {
-		// Create placeholders for the query
-		placeholders := make([]string, len(recurringIDs))
-		args := make([]interface{}, len(recurringIDs)+1)
-		args[0] = userID // First argument is userID
-
-		for i, id := range recurringIDs {
-			placeholders[i] = fmt.Sprintf("$%d", i+2) // +2 because $1 is userID
-			args[i+1] = id
-		}
-
-		// Construct the query with dynamic placeholders
-		query := fmt.Sprintf(`
-			SELECT 
-				"recurring_task_id", 
-				"user_id", 
-				"start_date", 
-				"end_date", 
-				"event_start_time", 
-				"event_end_time", 
-				"category_id", 
-				"constraint",
-				"title", 
-				"description", 
-				"created_at", 
-				"updated_at"
-			FROM "RecurringTasks"
-			WHERE "user_id" = $1 AND "recurring_task_id" IN (%s);
-		`, strings.Join(placeholders, ", "))
-
-		// Execute the query
-		rows, err := database.Query(query, args...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query recurring tasks: %w", err)
-		}
-		defer rows.Close()
-
-		// Process the recurring tasks
-		for rows.Next() {
-			var t RecurringTask
-			var categoryID sql.NullInt32
-			var description sql.NullString
-			var updatedAt sql.NullTime
-			var endDate sql.NullString
-			var startDateStr string
-			var constraintStr sql.NullString
-
-			// Match the number of fields in the SELECT query
-			err := rows.Scan(
-				&t.RecurringTaskID, // 1. recurring_task_id
-				&t.UserID,          // 2. user_id
-				&startDateStr,      // 3. start_date
-				&endDate,           // 4. end_date
-				&t.EventStartTime,  // 5. event_start_time
-				&t.EventEndTime,    // 6. event_end_time
-				&categoryID,        // 7. category_id
-				&constraintStr,     // 8. constraint
-				&t.Title,           // 9. title
-				&description,       // 10. description
-				&t.CreatedAt,       // 11. created_at
-				&updatedAt,         // 12. updated_at
-			)
-
-			if err != nil {
-				log.Printf("[ERROR] getTasksById: Row scan failed for recurring task: %v", err)
-				continue
-			}
-
-			// Handle nullable fields
-			if categoryID.Valid {
-				catID := int(categoryID.Int32)
-				t.CategoryID = &catID
-			}
-			if description.Valid {
-				t.Description = description.String
-			}
-			if updatedAt.Valid {
-				t.UpdatedAt = &updatedAt.Time
-			}
-			if endDate.Valid {
-				endDateValue := DayOfWeek(endDate.String)
-				t.EndDate = &endDateValue
-			}
-
-			// Convert string to DayOfWeek type
-			t.StartDate = DayOfWeek(startDateStr)
-
-			// Handle constraint value
-			if constraintStr.Valid && constraintStr.String != "" {
-				// Check if it's a valid constraint value
-				switch Constraint(constraintStr.String) {
-				case Hard, Soft:
-					t.Constraint = Constraint(constraintStr.String)
-				default:
-					// Invalid constraint value, use default
-					t.Constraint = Hard
-				}
-			} else {
-				// NULL or empty constraint, use default
-				t.Constraint = Hard
-			}
-
-			result.RecurringTasks = append(result.RecurringTasks, t)
-		}
-
-		// Check for errors in the query
-		if err := rows.Err(); err != nil {
-			log.Printf("[ERROR] getTasksById: Error iterating recurring tasks rows: %v", err)
-			return nil, fmt.Errorf("error processing recurring tasks: %w", err)
-		}
-	}
-
-	// Fetch one-off tasks
-	if len(oneOffIDs) > 0 {
-		// Create placeholders for the query
-		placeholders := make([]string, len(oneOffIDs))
-		args := make([]interface{}, len(oneOffIDs)+1)
-		args[0] = userID // First argument is userID
-
-		for i, id := range oneOffIDs {
-			placeholders[i] = fmt.Sprintf("$%d", i+2) // +2 because $1 is userID
-			args[i+1] = id
-		}
-
-		// Add a debug log for the SQL query
-		oneOffQuery := fmt.Sprintf(`
-			SELECT 
-				"one_off_task_id", 
-				"user_id", 
-				"deadline", 
-				"duration_minutes", 
-				"category_id", 
-				"constraint", 
-				"title", 
-				"description", 
-				"created_at", 
-				"updated_at"
-			FROM "OneOffTasks"
-			WHERE "user_id" = $1 AND "one_off_task_id" IN (%s);
-		`, strings.Join(placeholders, ", "))
-
-		log.Printf("[DEBUG] getTasksById: OneOff SQL Query: %s", oneOffQuery)
-
-		// Execute the query
-		rows, err := database.Query(oneOffQuery, args...)
-		if err != nil {
-			log.Printf("[ERROR] getTasksById: Failed to query one-off tasks: %v", err)
-			return nil, fmt.Errorf("failed to query one-off tasks: %w", err)
-		}
-		defer rows.Close()
-
-		// Process the one-off tasks
-		for rows.Next() {
-			var t OneOffTask
-			var categoryID sql.NullInt32
-			var description sql.NullString
-			var updatedAt sql.NullTime
-			var durationMinutes sql.NullInt32
-			var constraint sql.NullString
-
-			err := rows.Scan(
-				&t.OneOffTaskID,  // 1. one_off_task_id
-				&t.UserID,        // 2. user_id
-				&t.Deadline,      // 3. deadline
-				&durationMinutes, // 4. duration_minutes
-				&categoryID,      // 5. category_id
-				&constraint,      // 6. constraint
-				&t.Title,         // 7. title
-				&description,     // 8. description
-				&t.CreatedAt,     // 9. created_at
-				&updatedAt,       // 10. updated_at
-			)
-
-			if err != nil {
-				log.Printf("[ERROR] getTasksById: Row scan failed for one-off task: %v", err)
-				continue
-			}
-
-			// Handle nullable fields
-			if categoryID.Valid {
-				catID := int(categoryID.Int32)
-				t.CategoryID = &catID
-			}
-			if description.Valid {
-				t.Description = description.String
-			}
-			if updatedAt.Valid {
-				t.UpdatedAt = &updatedAt.Time
-			}
-			if durationMinutes.Valid {
-				t.DurationMinutes = int(durationMinutes.Int32)
-			}
-
-			// Handle constraint value
-			if constraint.Valid && constraint.String != "" {
-				// Check if it's a valid constraint value
-				switch Constraint(constraint.String) {
-				case Hard, Soft:
-					t.Constraint = constraint.String
-				default:
-					// Invalid constraint value, use default
-					t.Constraint = string(Soft)
-				}
-			} else {
-				// NULL or empty constraint, use default
-				t.Constraint = string(Soft)
-			}
-
-			result.OneOffTasks = append(result.OneOffTasks, t)
-		}
-
-		// Check for errors in the query
-		if err := rows.Err(); err != nil {
-			log.Printf("[ERROR] getTasksById: Error iterating one-off tasks rows: %v", err)
-			return nil, fmt.Errorf("error processing one-off tasks: %w", err)
-		}
-	}
-
-	return result, nil
-}
 
 // RunGA handles the request to run the genetic algorithm with the provided tasks
 func RunGA(c *gin.Context) {
-	var request TaskRequest
-
 	// Log the beginning of the RunGA function
 	log.Printf("[INFO] RunGA: Starting GA request processing")
 
@@ -355,6 +72,11 @@ func RunGA(c *gin.Context) {
 	log.Printf("[INFO] RunGA: Processing request for user ID: %d", userID)
 
 	// Bind JSON request to the struct
+	var request struct {
+		Recurring []int `json:"recurring_task_ids"`
+		OneOff    []int `json:"one_off_task_ids"`
+	}
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		log.Printf("[ERROR] RunGA: Invalid request format: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -365,29 +87,170 @@ func RunGA(c *gin.Context) {
 	log.Printf("[INFO] RunGA: Received request with %d recurring tasks and %d one-off tasks",
 		len(request.Recurring), len(request.OneOff))
 
-	// Get tasks by their IDs
-	tasksResult, err := getTasksById(c, request.Recurring, request.OneOff)
+	// Call the GenerateSchedule function directly with the user ID and task IDs
+
+	jsonResponse := runga.GenerateSchedule(userID, request.Recurring, request.OneOff)
+
+	gaGenerationID, err := createGAGenerationRecord(userID)
 	if err != nil {
-		log.Printf("[ERROR] RunGA: Failed to get tasks: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] RunGA: Failed to create GA generation record: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create GA generation record"})
 		return
 	}
 
-	// Log successful retrieval
-	log.Printf("[INFO] RunGA: Successfully retrieved %d recurring tasks and %d one-off tasks",
-		len(tasksResult.RecurringTasks), len(tasksResult.OneOffTasks))
+	SaveTaskInstances(userID, gaGenerationID, jsonResponse)
+	if err != nil {
+		log.Printf("[ERROR] RunGA: Failed to create GA tasks: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create GA tasks"})
+		return
+	}
 
-	// Log the received data for debugging
-	c.JSON(http.StatusOK, gin.H{
-		"message":         "Genetic algorithm request received",
-		"user_id":         userID,
-		"recurring_tasks": tasksResult.RecurringTasks,
-		"one_off_tasks":   tasksResult.OneOffTasks,
-	})
+	// Return the JSON response directly
+	c.Data(http.StatusOK, "application/json", jsonResponse)
+}
 
-	// TODO: Add actual GA implementation logic here
-	// This would call into your GA package functionality
-	// For example: results := RunGeneticAlgorithm(tasksResult.RecurringTasks, tasksResult.OneOffTasks)
+// SaveTaskInstances saves the task instances from a GA generation
+func SaveTaskInstances(userID int, gaGenerationID int, jsonData []byte) error {
+	log.Printf("[INFO] SaveTaskInstances: Called for user %d, generation %d. JSON data size: %d bytes.",
+		userID, gaGenerationID, len(jsonData))
+
+	// Parse the JSON data
+	var scheduledTasks []ScheduledTask
+	log.Printf("[INFO] SaveTaskInstances: Attempting to parse JSON data for user %d.", userID)
+	if err := json.Unmarshal(jsonData, &scheduledTasks); err != nil {
+		log.Printf("[ERROR] SaveTaskInstances: Failed to parse JSON data for user %d: %v", userID, err)
+		return fmt.Errorf("failed to parse task data for user %d: %w", userID, err) // Use %w for error wrapping if using Go 1.13+
+	}
+
+	if len(scheduledTasks) == 0 {
+		log.Printf("[INFO] SaveTaskInstances: No tasks found in JSON data for user %d, generation %d. Nothing to save.", userID, gaGenerationID)
+		return nil // Nothing to do, not an error
+	}
+
+	log.Printf("[INFO] SaveTaskInstances: Parsed %d tasks for user %d, generation %d. Proceeding to save.",
+		len(scheduledTasks), userID, gaGenerationID)
+
+	// Get database connection
+	log.Printf("[INFO] SaveTaskInstances: Getting database connection.")
+	database := db.GetDB() // Assuming db.GetDB() returns *sql.DB
+	if database == nil {
+		log.Printf("[ERROR] SaveTaskInstances: Failed to get database connection.")
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Begin transaction
+	log.Printf("[INFO] SaveTaskInstances: Beginning database transaction for user %d, generation %d.", userID, gaGenerationID)
+	tx, err := database.Begin()
+	if err != nil {
+		log.Printf("[ERROR] SaveTaskInstances: Failed to begin transaction for user %d: %v", userID, err)
+		return fmt.Errorf("failed to begin transaction for user %d: %w", userID, err)
+	}
+	// Defer rollback in case of errors - MUST come after error check for Begin()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			// Log rollback errors unless it's because the transaction was already committed/rolled back
+			log.Printf("[ERROR] SaveTaskInstances: Failed to rollback transaction for user %d: %v", userID, err)
+		}
+	}()
+
+	// Prepare insert statement
+	log.Printf("[INFO] SaveTaskInstances: Preparing insert statement for TaskInstances.")
+	stmt, err := tx.Prepare(`
+		INSERT INTO "TaskInstances" (
+			"user_id",
+			"GAGeneration_id",
+			"task_source_id",
+			"task_source_type",
+			"scheduled_start_datetime",
+			"scheduled_end_datetime",
+			"title",
+			"description",
+			"created_at"
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`)
+	if err != nil {
+		log.Printf("[ERROR] SaveTaskInstances: Failed to prepare statement for user %d: %v", userID, err)
+		// Rollback will be handled by defer
+		return fmt.Errorf("failed to prepare insert statement for user %d: %w", userID, err)
+	}
+	// Defer closing the statement - MUST come after error check for Prepare()
+	defer stmt.Close()
+
+	// Insert each task instance
+	now := time.Now() // Use a single timestamp for all inserts in this batch
+	log.Printf("[INFO] SaveTaskInstances: Starting batch insert for %d tasks (user %d, generation %d).", len(scheduledTasks), userID, gaGenerationID)
+	for i, task := range scheduledTasks {
+		// Determine task source type
+		var taskSourceType TaskSubType
+		switch task.TaskType {
+		case "one_off":
+			taskSourceType = TaskSubTypeOneOff
+		case "recurring":
+			taskSourceType = TaskSubTypeRecurring
+		default:
+			log.Printf("[WARN] SaveTaskInstances: User %d, Generation %d: Unknown task type '%s' for source task ID %d. Defaulting to '%s'.",
+				userID, gaGenerationID, task.TaskType, task.ID, TaskSubTypeOneOff)
+			taskSourceType = TaskSubTypeOneOff
+		}
+
+		log.Printf("[DEBUG] SaveTaskInstances: Inserting task %d/%d: SourceID=%d, Type=%s, Title='%s' for user %d.",
+			i+1, len(scheduledTasks), task.ID, taskSourceType, task.Title, userID) // DEBUG level might be better here if you have levelled logging
+
+		// Execute insert
+		_, err := stmt.Exec(
+			userID,
+			gaGenerationID,
+			task.ID,
+			string(taskSourceType), // Convert enum/type to string for DB
+			task.StartDate,
+			task.EndDate,
+			task.Title,
+			task.Description,
+			now, // Consistent created_at for the batch
+		)
+		if err != nil {
+			// Specific error handling could go here (e.g., check for constraint violations)
+			log.Printf("[ERROR] SaveTaskInstances: Failed to insert task instance %d/%d (SourceID: %d, Title: '%s') for user %d: %v. Rolling back transaction.",
+				i+1, len(scheduledTasks), task.ID, task.Title, userID, err)
+			// Rollback will be handled by defer
+			return fmt.Errorf("failed to insert task instance (user %d, source task %d): %w", userID, task.ID, err)
+		}
+	}
+
+	// Commit transaction
+	log.Printf("[INFO] SaveTaskInstances: Attempting to commit transaction for user %d, generation %d after inserting %d tasks.",
+		userID, gaGenerationID, len(scheduledTasks))
+	if err := tx.Commit(); err != nil {
+		log.Printf("[ERROR] SaveTaskInstances: Failed to commit transaction for user %d: %v", userID, err)
+		// Rollback should be implicitly handled by defer here as Commit failed.
+		return fmt.Errorf("failed to commit transaction for user %d: %w", userID, err)
+	}
+
+	log.Printf("[INFO] SaveTaskInstances: Successfully saved %d task instances for user %d, generation %d.",
+		len(scheduledTasks), userID, gaGenerationID)
+	return nil // Success!
+}
+
+func createGAGenerationRecord(userID int) (int, error) {
+	database := db.GetDB()
+	if database == nil {
+		return 0, fmt.Errorf("database connection error")
+	}
+
+	var gaGenerationID int
+	err := database.QueryRow(
+		`INSERT INTO "GAGeneration" ("user_id", "calendar_id", "created_at") 
+         VALUES ($1, NULL, $2) 
+         RETURNING "GAGeneration_id"`,
+		userID, time.Now(),
+	).Scan(&gaGenerationID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return gaGenerationID, nil
 }
 
 // SetupRoutes configures the GA routes

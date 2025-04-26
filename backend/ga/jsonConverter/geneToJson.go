@@ -1,8 +1,8 @@
 package geneToJson
 
 import (
-	"GA_2/Tasks"
-	"GA_2/utils/timeUtils"
+	"api/ga/Tasks"
+	"api/ga/utils/timeUtils"
 	"time"
 )
 
@@ -11,12 +11,12 @@ type Calendar struct {
 	Title       string    `json:"title"`
 	StartDate   time.Time `json:"startDate"`
 	EndDate     time.Time `json:"endDate"`
+	TaskType    string    `json:"taskType"`
 	Description string    `json:"description"`
 }
 
-func GeneToList(temp []int, startDay time.Time, loc *time.Location) []Calendar {
+func GeneToList(temp []int, startDay time.Time, loc *time.Location, allTasks []Tasks.TaskList) []Calendar {
 	var taskList []Calendar
-	allTasks := Tasks.GetAllTasks()
 
 	if len(temp) == 0 {
 		return taskList
@@ -36,6 +36,7 @@ func GeneToList(temp []int, startDay time.Time, loc *time.Location) []Calendar {
 						Title:       allTasks[currentID-1].TaskTitle,
 						StartDate:   st,
 						EndDate:     et,
+						TaskType:    allTasks[currentID-1].TaskSource,
 						Description: allTasks[currentID-1].TaskDescription,
 					})
 				}
@@ -50,6 +51,7 @@ func GeneToList(temp []int, startDay time.Time, loc *time.Location) []Calendar {
 				Title:       allTasks[currentID-1].TaskTitle,
 				StartDate:   st,
 				EndDate:     et,
+				TaskType:    allTasks[currentID-1].TaskSource,
 				Description: allTasks[currentID-1].TaskDescription,
 			})
 			currentID = 0
@@ -65,6 +67,7 @@ func GeneToList(temp []int, startDay time.Time, loc *time.Location) []Calendar {
 			Title:       allTasks[currentID-1].TaskTitle,
 			StartDate:   st,
 			EndDate:     et,
+			TaskType:    allTasks[currentID-1].TaskSource,
 			Description: allTasks[currentID-1].TaskDescription,
 		})
 	}

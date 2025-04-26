@@ -4,11 +4,12 @@ type TaskList struct {
 	TaskId          int
 	TaskTitle       string
 	TaskDescription string
+	TaskSource      string
 	TaskSlots       int
 }
 
 // CreateHardList extracts tasks with "hard" constraints from both one-off and recurring tasks
-func CreateHardList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []TaskList {
+func CreateHardList(oneOffTasks []OneOffTaskGA, recurringTasks []RecurringTaskGA) []TaskList {
 	var hardList []TaskList
 
 	// Process one-off tasks with hard constraints
@@ -18,6 +19,7 @@ func CreateHardList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 				TaskId:          oneOffTask.TaskId,
 				TaskTitle:       oneOffTask.Description,
 				TaskDescription: oneOffTask.Description,
+				TaskSource:      "one_off",
 				TaskSlots:       oneOffTask.Slots,
 			})
 		}
@@ -30,6 +32,7 @@ func CreateHardList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 				TaskId:          recurringTask.TaskId,
 				TaskTitle:       recurringTask.Description,
 				TaskDescription: recurringTask.Description,
+				TaskSource:      "recurring",
 				TaskSlots:       recurringTask.Slots,
 			})
 		}
@@ -39,7 +42,7 @@ func CreateHardList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 }
 
 // CreateSoftList extracts tasks with "soft" constraints from both one-off and recurring tasks
-func CreateSoftList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []TaskList {
+func CreateSoftList(oneOffTasks []OneOffTaskGA, recurringTasks []RecurringTaskGA) []TaskList {
 	var softList []TaskList
 
 	// Process one-off tasks with soft constraints
@@ -49,6 +52,7 @@ func CreateSoftList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 				TaskId:          oneOffTask.TaskId,
 				TaskTitle:       oneOffTask.Description,
 				TaskDescription: oneOffTask.Description,
+				TaskSource:      "one_off",
 				TaskSlots:       oneOffTask.Slots,
 			})
 		}
@@ -61,6 +65,7 @@ func CreateSoftList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 				TaskId:          recurringTask.TaskId,
 				TaskTitle:       recurringTask.Description,
 				TaskDescription: recurringTask.Description,
+				TaskSource:      "recurring",
 				TaskSlots:       recurringTask.Slots,
 			})
 		}
@@ -70,23 +75,12 @@ func CreateSoftList(oneOffTasks []OneOffTask, recurringTasks []RecurringTask) []
 }
 
 // TaskInitializer initializes and returns both hard and soft task lists
-func TaskInitialise() ([]TaskList, []TaskList) {
-	// Get the predefined tasks from the task creation functions
-	oneOffTasks := CreateOneOffTask()
-	recurringTasks := CreateRecuringScheudle()
+func TaskInitialise(recurringTasks []RecurringTaskGA, oneOffTasks []OneOffTaskGA) ([]TaskList, []TaskList, []TaskList) {
 
 	// Create the hard and soft task lists
 	hardList := CreateHardList(oneOffTasks, recurringTasks)
 	softList := CreateSoftList(oneOffTasks, recurringTasks)
-
-	return hardList, softList
-}
-
-func GetAllTasks() []TaskList {
-	hardList, softList := TaskInitialise()
-
-	// Combine both lists
 	allTasks := append(hardList, softList...)
 
-	return allTasks
+	return hardList, softList, allTasks
 }

@@ -2,10 +2,14 @@ package Tasks
 
 import (
 	"api/db"
+	"database/sql"
 	"fmt"
+	"time"
+
+	"github.com/lib/pq"
 )
 
-type OneOffTask struct {
+type OneOffTaskGA struct {
 	TaskId      int
 	Deadline    int
 	Slots       int // Represents duration in 15-minute slots
@@ -14,20 +18,35 @@ type OneOffTask struct {
 	Description string
 }
 
-func getOneOffTaskDB() {
+type OneOffTask struct {
+	OneOffTaskID    int        `json:"one_off_task_id"`
+	UserID          int        `json:"user_id"`
+	Deadline        *time.Time `json:"deadline"`
+	DurationMinutes int        `json:"duration_minutes"` // Optional, but useful for scheduling
+	CategoryID      *int       `json:"category_id"`      // Optional field
+	Constraint      string     `json:"constraint"`
+	Title           string     `json:"title" binding:"required"`
+	Description     string     `json:"description"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at"` // Optional field
+}
 
+func FetchOneOffTaskByDB(userID int, taskIDs []int) ([]OneOffTask, error) {
 	dbConn := db.GetDB()
+	if dbConn == nil {
+		return nil, fmt.Errorf("failed to get database connection")
+	}
 
 	// Basic SELECT statement to retrieve one-off tasks
 	query := `
-		SELECT id, title, description, duration_minutes, priority, deadline, user_id 
-		FROM one_off_tasks 
-		WHERE is_completed = false
-		ORDER BY deadline ASC, priority DESC
+		SELECT "one_off_task_id", "title", "description", "duration_minutes", 
+		       "constraint", "deadline", "user_id", "category_id", "created_at", "updated_at"
+		FROM "OneOffTasks" 
+		WHERE "user_id" = $1 AND "one_off_task_id" = ANY($2)
 	`
 
-	// Execute the query
-	rows, err := dbConn.Query(query)
+	// Execute the query with parameters
+	rows, err := dbConn.Query(query, userID, pq.Array(taskIDs))
 	if err != nil {
 		return nil, fmt.Errorf("error querying one-off tasks: %w", err)
 	}
@@ -39,104 +58,111 @@ func getOneOffTaskDB() {
 	// Iterate through the result rows
 	for rows.Next() {
 		var task OneOffTask
-		var deadline sql.NullTime // Handle nullable deadline
+		var deadline sql.NullTime         // Handle nullable deadline
+		var description sql.NullString    // Handle nullable description
+		var categoryID sql.NullInt32      // Handle nullable category ID
+		var updatedAt sql.NullTime        // Handle nullable updated_at
+		var durationMinutes sql.NullInt32 // Handle nullable duration
+		var constraint sql.NullString     // Handle nullable constraint
 
 		// Scan the row into our struct
 		err := rows.Scan(
-			&task.ID,
+			&task.OneOffTaskID,
 			&task.Title,
-			&task.Description,
-			&task.DurationMinutes,
-			&task.Priority,
+			&description,
+			&durationMinutes,
+			&constraint,
 			&deadline,
 			&task.UserID,
+			&categoryID,
+			&task.CreatedAt,
+			&updatedAt,
 		)
 
 		if err != nil {
 			return nil, fmt.Errorf("error scanning one-off task row: %w", err)
 		}
 
-		// Handle nullable deadline
+		// Handle nullable fields
 		if deadline.Valid {
-			task.Deadline = deadline.Time
+			task.Deadline = &deadline.Time
+		}
+
+		if description.Valid {
+			task.Description = description.String
+		}
+
+		if categoryID.Valid {
+			catID := int(categoryID.Int32)
+			task.CategoryID = &catID
+		}
+
+		if updatedAt.Valid {
+			task.UpdatedAt = &updatedAt.Time
+		}
+
+		if durationMinutes.Valid {
+			task.DurationMinutes = int(durationMinutes.Int32)
+		}
+
+		if constraint.Valid {
+			task.Constraint = constraint.String
+		} else {
+			task.Constraint = string(Soft) // Default to soft constraint
 		}
 
 		// Add to our slice of tasks
 		tasks = append(tasks, task)
 	}
+	fmt.Println("Fetched %d one-off tasks\n", len(tasks))
 
 	// Check for errors from iterating over rows
 	if err = rows.Err(); err != nil {
-		return
+		return nil, fmt.Errorf("error iterating over one-off task rows: %w", err)
 	}
 
+	fmt.Printf("Fetched %d one-off tasks\n", len(tasks))
+
+	return tasks, nil
 }
 
-func CreateOneOffTask() []OneOffTask {
-	// 1. Declare an empty slice
-	var schedule []OneOffTask
+func ConvertOneOffTasksToGA(tasks []OneOffTask) []OneOffTaskGA {
+	var result []OneOffTaskGA
 
-	// 2. Append each task individually, with pre-calculated slots
-	// Task 1: DSP Objective - Understanding Core Concepts (180 min / 15 = 12 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      7,
-		Slots:       12,
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Review Core DSP Principles for Project",
-		Description: "Solidify understanding of filtering and FFTs as required for the main DSP objectives. Re-read relevant chapters/notes.",
-	})
+	for _, task := range tasks {
+		// Calculate deadline epoch days (days since Jan 1, 2000)
+		var deadline int
+		if task.Deadline != nil {
+			// Convert deadline to days since Jan 1, 2000
+			baseDate := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+			deadline = int(task.Deadline.Sub(baseDate).Hours() / 24)
+		} else {
 
-	// Task 2: DSP Objective - Algorithm Implementation Planning (90 min / 15 = 6 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      8,
-		Slots:       6, // Pre-calculated
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Outline DSP Algorithm Implementation Steps",
-		Description: "Break down the required DSP algorithm into smaller, implementable modules. Define inputs/outputs for each.",
-	})
+			deadline = 0
+		}
 
-	// Task 3: GA Account Goal - Performance Analysis (120 min / 15 = 8 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      9,
-		Slots:       8, // Pre-calculated
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Analyze GA Account Performance Trends",
-		Description: "Review key metrics (users, sessions, conversions) in the GA account for the last quarter. Identify significant changes or trends.",
-	})
+		// Calculate duration in 15-minute slots
+		slots := task.DurationMinutes / 15
+		if task.DurationMinutes%15 > 0 {
+			slots++ // Round up to next 15-minute slot
+		}
 
-	// Task 4: GA Account Goal - Reporting Structure (60 min / 15 = 4 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      10,
-		Slots:       4, // Pre-calculated
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Define GA Reporting Structure",
-		Description: "Plan the structure and key sections for the next GA performance report. What data needs to be presented?",
-	})
+		// Default to at least 1 slot (15 minutes)
+		if slots < 1 {
+			slots = 1
+		}
 
-	// Task 5: General Skill Development (Supports DSP/GA goals) (75 min / 15 = 5 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      11,
-		Slots:       5, // Pre-calculated
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Explore Advanced Features in Analysis Tool",
-		Description: "Investigate advanced features (e.g., custom segments in GA, specific library functions for DSP) relevant to current aims.",
-	})
+		gaTask := OneOffTaskGA{
+			TaskId:      task.OneOffTaskID,
+			Deadline:    deadline,
+			Slots:       slots,
+			Constraint:  task.Constraint,
+			Title:       task.Title,
+			Description: task.Description,
+		}
 
-	// Task 6: DSP Objective - Prepare for Supervisor Meeting (45 min / 15 = 3 slots)
-	schedule = append(schedule, OneOffTask{
-		TaskId:      12,
-		Slots:       3, // Pre-calculated (45 / 15 = 3)
-		Deadline:    0,
-		Constraint:  "soft",
-		Title:       "Prepare Questions/Updates for DSP Meeting",
-		Description: "List key progress points, challenges encountered, and questions to ask during the next meeting with the DSP supervisor.",
-	})
+		result = append(result, gaTask)
+	}
 
-	// 3. Return the populated slice
-	return schedule
+	return result
 }

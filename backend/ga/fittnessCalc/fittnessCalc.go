@@ -1,8 +1,7 @@
 package fitnessCalc
 
 import (
-	"GA_2/Tasks"
-	"fmt"
+	"api/ga/Tasks"
 
 	_ "strconv"
 )
@@ -355,11 +354,7 @@ func SoftTasksValid(chromo []int, allTasks []Tasks.TaskList) int {
 			weight += (-difference) * MissTaskPen // Penalty for having too few slots
 		}
 
-		fmt.Printf("Task ID: %d, Expected: %d, Actual: %d, Difference: %d, Weight Contribution: %d\n",
-			taskID, expectedCount, actualCount, difference, abs(difference))
 	}
-
-	fmt.Printf("Total weight from SoftScheduleValid: %d\n", weight)
 
 	return weight
 }
@@ -372,6 +367,7 @@ func abs(x int) int {
 	return x
 }
 
+/*
 func DeadLineChecker(chromo []int, oneOffTasks []Tasks.OneOffTask) int {
 	var weight int
 
@@ -388,6 +384,9 @@ func DeadLineChecker(chromo []int, oneOffTasks []Tasks.OneOffTask) int {
 	return weight * 2
 }
 
+
+*/
+
 func GetHardConstraits(chromo []int, schedule []int, allTask []Tasks.TaskList, softTask []Tasks.OneOffTask) int {
 	var hard int
 
@@ -399,8 +398,8 @@ func GetHardConstraits(chromo []int, schedule []int, allTask []Tasks.TaskList, s
 	hard += softS
 	//fmt.Println("AllTasksValid Validity: " + strconv.Itoa(softS))
 
-	deadline := DeadLineChecker(chromo, softTask)
-	hard += deadline
+	//deadline := DeadLineChecker(chromo, softTask)
+	//hard += deadline
 	//fmt.Println("Deadline Validity: " + strconv.Itoa(deadline))
 
 	//	fmt.Println("Total HARD Constraints: ", hard)
