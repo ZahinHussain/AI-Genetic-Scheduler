@@ -10,7 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"api/auth" // Import auth package for authentication middleware
+	// Import auth package for authentication middleware
+	"api/auth"
 	"api/db"
 
 	// Database connection
@@ -73,8 +74,9 @@ func RunGA(c *gin.Context) {
 
 	// Bind JSON request to the struct
 	var request struct {
-		Recurring []int `json:"recurring_task_ids"`
-		OneOff    []int `json:"one_off_task_ids"`
+		Recurring []int  `json:"recurring_task_ids"`
+		OneOff    []int  `json:"one_off_task_ids"`
+		StartDate string `json:"day_start"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -89,7 +91,7 @@ func RunGA(c *gin.Context) {
 
 	// Call the GenerateSchedule function directly with the user ID and task IDs
 
-	jsonResponse := runga.GenerateSchedule(userID, request.Recurring, request.OneOff)
+	jsonResponse := runga.GenerateSchedule(userID, request.Recurring, request.OneOff, request.StartDate)
 
 	gaGenerationID, err := createGAGenerationRecord(userID)
 	if err != nil {
@@ -261,7 +263,14 @@ func SetupRoutes(router *gin.Engine) {
 	gaGroup := router.Group("/ga")
 	gaGroup.Use(auth.AuthMiddleware()) // Apply auth middleware to all GA routes
 	{
+		// Register the main GA endpoint without trailing slash
+		// This will handle POST requests to /ga
 		log.Printf("[DEBUG] GA: Configuring: POST /ga")
+		gaGroup.POST("", RunGA) // Note the empty string instead of "/"
+
+		// For backward compatibility (optional - can be removed if not needed)
+		// This handles POST requests to /ga/
+		log.Printf("[DEBUG] GA: Also configuring: POST /ga/ (with trailing slash)")
 		gaGroup.POST("/", RunGA)
 
 		// Add any other GA routes here

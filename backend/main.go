@@ -7,6 +7,7 @@ import (
 
 	// Import using relative path
 	"api/auth"
+	"api/calendar"
 	"api/db"
 	"api/ga"
 	"api/oneofftasks"
@@ -22,7 +23,7 @@ func main() {
 
 	// Configure CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -42,7 +43,8 @@ func main() {
 	//tasks.SetupRoutes(router)
 	recurringtasks.SetupRoutes(router) // Setup recurring tasks routes
 	oneofftasks.SetupRoutes(router)
-	ga.SetupRoutes(router) // Setup GA routes
+	ga.SetupRoutes(router)       // Setup GA routes
+	calendar.SetupRoutes(router) // Setup calendar routes
 
 	// Start server
 	router.Run() // listen and serve on 0.0.0.0:8080

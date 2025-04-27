@@ -33,7 +33,7 @@ var bestOverall *CreatePop.Individual
 
 // Initialize task lists
 
-func GenerateSchedule(userId int, recurringIDs []int, oneOffIDs []int) []byte {
+func GenerateSchedule(userId int, recurringIDs []int, oneOffIDs []int, dayStart string) []byte {
 	fmt.Println("Starting schedule generation...")
 
 	var fetchReccuringTasks []Tasks.RecurringTask
@@ -92,7 +92,7 @@ func GenerateSchedule(userId int, recurringIDs []int, oneOffIDs []int) []byte {
 	}
 
 	fmt.Println("Evolution complete. Converting best individual to JSON...")
-	jsonOutput := GeneToJsonConverter(bestOverall.Gene)
+	jsonOutput := GeneToJsonConverter(bestOverall.Gene, dayStart)
 	fmt.Println("JSON conversion done.")
 
 	return jsonOutput
@@ -319,18 +319,27 @@ func SelectHard() int {
 	return hard[tempNum].TaskId
 }
 
-func GeneToJsonConverter(temp []int) []byte {
-
+func GeneToJsonConverter(temp []int, startDay string) []byte {
+	// Load the timezone
 	loc, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		fmt.Println("Error loading location:", err)
 		return nil
 	}
 
-	startDay := time.Now()
-	startDay = startDay.AddDate(0, 0, 1)
+	// Parse the date string to a time.Time object
+	startDate, err := time.Parse("2006-01-02", startDay)
+	if err != nil {
+		fmt.Println("Error parsing start date:", err)
+		return nil
+	}
 
-	calendar := geneToJson.GeneToList(temp, startDay, loc, allTasks)
+	// If you need to set the timezone for the parsed date
+	startDateWithTZ := startDate.In(loc)
+
+	// Now pass the properly parsed date to GeneToList
+	// Note: You may need to adjust this call based on what GeneToList actually expects
+	calendar := geneToJson.GeneToList(temp, startDateWithTZ, loc, allTasks)
 
 	jsonOutput, err := json.MarshalIndent(calendar, "", "  ")
 	if err != nil {
@@ -339,5 +348,4 @@ func GeneToJsonConverter(temp []int) []byte {
 	}
 
 	return jsonOutput
-
 }
