@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -116,6 +117,108 @@ func GetCalendarTasks(c *gin.Context) {
 	})
 }
 
+// Request structure for binding the JSON body
+type AddCalendarRequest struct {
+	generationId int    `json:"gaid" binding:"required,gt=0"`
+	StartDate    string `json:"startDate" binding:"required"`
+}
+
+// AddScheduledCalendar handles adding a new calendar entry based on GA generation ID
+func AddScheduledCalendar(c *gin.Context) {
+	// Enhanced debugging: Log start and client IP
+	log.Printf("[DEBUG] AddScheduledCalendar: Request received from %s", c.ClientIP())
+
+	// 1. Get User ID from context (set by auth middleware)
+	userIDInter, exists := c.Get("userID")
+	if !exists {
+		log.Printf("[DEBUG] AddScheduledCalendar: userID not found in context. Auth has failed.")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Type assert and validate the userID
+	userID, ok := userIDInter.(int)
+	if !ok || userID <= 0 {
+		log.Printf("[DEBUG] AddScheduledCalendar: userID is not a valid integer or is non-positive. Got: %T, Value: %v", userIDInter, userIDInter)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	log.Printf("[DEBUG] AddScheduledCalendar: Processing request for userID: %d", userID)
+
+	// 2. Bind JSON request body to the struct
+	var req AddCalendarRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Log binding errors at DEBUG level as they are client-side issues
+		log.Printf("[DEBUG] AddScheduledCalendar: Invalid JSON data for userID %d: %v", userID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+	log.Printf("[DEBUG] AddScheduledCalendar: Request data bound for userID %d - gaid: %d, startDate: %s", userID, req.GAID, req.StartDate)
+
+	// 3. Validate StartDate format (ensure it's YYYY-MM-DD)
+	// The "2006-01-02" is Go's specific layout string for YYYY-MM-DD parsing.
+	_, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		// Log validation errors at DEBUG level as they are client-side input issues
+		log.Printf("[DEBUG] AddScheduledCalendar: Invalid startDate format '%s' provided by userID %d: %v", req.StartDate, userID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid startDate format. Please use YYYY-MM-DD."})
+		return
+	}
+	log.Printf("[DEBUG] AddScheduledCalendar: StartDate format validated for userID %d.", userID)
+
+	// 4. Prepare and execute the INSERT statement
+	// Get database connection (assuming 'db' is accessible)
+	database := db.GetDB()
+	if database == nil {
+		// Log database connection errors at ERROR level
+		log.Printf("[ERROR] AddScheduledCalendar: Failed to get database connection for userID %d", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
+		return
+	}
+
+	ctx := c.Request.Context() // Use request context for potential cancellation
+	query := `
+		INSERT INTO "Calendars" ("user_id", "GAGeneration_id", "start_date")
+		VALUES ($1, $2, $3)
+	` // Using $ for PostgreSQL placeholders
+
+	// Log the values being inserted for debugging
+	log.Printf("[DEBUG] AddScheduledCalendar: Executing INSERT for userID: %d, GAGeneration_id: %d, start_date: %s",
+		userID, req.GAID, req.StartDate)
+
+	// Execute the query using the accessible 'db' connection
+	result, err := database.ExecContext(ctx, query, userID, req.GAID, req.StartDate)
+	if err != nil {
+		// Log database execution errors at ERROR level
+		log.Printf("[ERROR] AddScheduledCalendar: Failed to insert calendar entry for userID %d, gaid %d: %v", userID, req.GAID, err)
+
+		// More detailed error message to help diagnose database-specific issues
+		errMsg := fmt.Sprintf("Failed to save calendar entry: %v", err)
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsg})
+		return
+	}
+
+	// 5. Optionally check rows affected and log appropriately
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		// Log inability to check rows affected as a warning, not a failure
+		log.Printf("[WARN] AddScheduledCalendar: Could not verify rows affected after insert for userID %d, gaid %d: %v", userID, req.GAID, err)
+	} else if rowsAffected == 0 {
+		// Log 0 rows affected as a potential issue (could be constraint violation or already exists)
+		log.Printf("[WARN] AddScheduledCalendar: INSERT statement affected 0 rows for userID %d, gaid %d. Check constraints or if entry already exists.", userID, req.GAID)
+		// Depending on requirements, you might return an error here or a specific message
+		// c.JSON(http.StatusConflict, gin.H{"error": "Calendar entry might already exist or constraints prevent insertion"})
+		// return
+	} else {
+		log.Printf("[DEBUG] AddScheduledCalendar: Insert successful for userID %d, gaid %d. Rows affected: %d", userID, req.GAID, rowsAffected)
+	}
+
+	// 6. Return success response
+	log.Printf("[DEBUG] AddScheduledCalendar: Successfully added calendar entry for userID %d.", userID)
+	c.JSON(http.StatusCreated, gin.H{"message": "Calendar entry added successfully"})
+}
+
 // SetupRoutes configures the API routes for calendar functionality
 func SetupRoutes(router *gin.Engine) {
 	// Create a calendar group with authentication middleware
@@ -124,4 +227,5 @@ func SetupRoutes(router *gin.Engine) {
 
 	// Calendar endpoints
 	calendarGroup.GET("", GetCalendarTasks)
+	calendarGroup.POST("", AddScheduledCalendar) // Add a new endpoint for adding scheduled calendar tasks
 }

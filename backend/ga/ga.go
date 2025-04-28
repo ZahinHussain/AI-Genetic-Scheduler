@@ -50,6 +50,12 @@ type TaskInstance struct {
 	UpdatedAt              *time.Time  `json:"updated_at"`
 }
 
+type GAResponse struct {
+	GenerationID int             `json:"generation_id"` // The ID you want to include
+	StartDate    string          `json:"start_date"`    // The start date of the schedule
+	Schedule     json.RawMessage `json:"schedule"`      // To embed the raw JSON from jsonResponse
+}
+
 // TaskRequest represents the JSON structure for the GA route request
 
 // RunGA handles the request to run the genetic algorithm with the provided tasks
@@ -107,8 +113,17 @@ func RunGA(c *gin.Context) {
 		return
 	}
 
-	// Return the JSON response directly
-	c.Data(http.StatusOK, "application/json", jsonResponse)
+	combinedResponse := GAResponse{
+		GenerationID: gaGenerationID,
+		StartDate:    request.StartDate,
+		Schedule:     json.RawMessage(jsonResponse), // Assign the raw JSON bytes here
+	}
+
+	// --- Return the combined JSON response ---
+	// Use c.JSON for automatic marshaling and content type setting
+	log.Printf("[INFO] RunGA: Sending combined response for generation ID: %d", gaGenerationID)
+	c.JSON(http.StatusOK, combinedResponse)
+
 }
 
 // SaveTaskInstances saves the task instances from a GA generation
@@ -255,6 +270,10 @@ func createGAGenerationRecord(userID int) (int, error) {
 	return gaGenerationID, nil
 }
 
+func addToCalender() {
+
+}
+
 // SetupRoutes configures the GA routes
 func SetupRoutes(router *gin.Engine) {
 	log.Printf("[DEBUG] GA: Setting up GA routes with authentication...")
@@ -267,11 +286,6 @@ func SetupRoutes(router *gin.Engine) {
 		// This will handle POST requests to /ga
 		log.Printf("[DEBUG] GA: Configuring: POST /ga")
 		gaGroup.POST("", RunGA) // Note the empty string instead of "/"
-
-		// For backward compatibility (optional - can be removed if not needed)
-		// This handles POST requests to /ga/
-		log.Printf("[DEBUG] GA: Also configuring: POST /ga/ (with trailing slash)")
-		gaGroup.POST("/", RunGA)
 
 		// Add any other GA routes here
 	}
