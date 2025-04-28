@@ -30,7 +30,18 @@ interface OneOffTask {
 
 // Helper function to get the ID from a task, regardless of field name
 const getTaskId = (task: OneOffTask): number | undefined => {
-  return task.id || task.one_off_task_id || task.task_id;
+  try{
+    if (task.id) return task.id;
+    
+
+
+    if (task.one_off_task_id) return task.one_off_task_id;
+    if (task.task_id) return task.task_id;
+  }
+  catch (error) {
+    console.error("Error getting task ID:", error);
+  }
+  
 };
 
 // Helper function to format date and time
@@ -68,19 +79,7 @@ const constraintTypes: Record<string, { label: string, color: string }> = {
 };
 
 // Sample test data in case the API fails
-const sampleData: OneOffTask[] = [
-  {
-    id: 1,
-    deadline: "2023-12-20T16:00:00Z",
-    duration_minutes: 120,
-    category_id: null,
-    constraint: "hard",
-    title: "Research AI Scheduling Algorithms",
-    description: "Review literature on genetic algorithms for scheduling optimization",
-    created_at: "2025-04-13T13:36:01.401376Z",
-    updated_at: "2025-04-13T13:36:01.401377Z"
-  }
-];
+
 
 export default function OneOffTasksTable() {
   const [oneOffTasks, setOneOffTasks] = useState<OneOffTask[]>([]);
@@ -137,18 +136,17 @@ export default function OneOffTasksTable() {
             setOneOffTasks(tasks as OneOffTask[]);
           } else {
             console.warn("Unexpected response format", data);
-            setOneOffTasks(sampleData); // Fallback to sample data
+
           }
         }
       } else {
         console.warn("Unexpected response format", data);
-        setOneOffTasks(sampleData); // Fallback to sample data
+
       }
     } catch (err) {
       console.error('Failed to fetch one-off tasks:', err);
       setError('Failed to load one-off tasks. Please try again later.');
-      // Use sample data in case of API failure for testing purposes
-      setOneOffTasks(sampleData);
+
     } finally {
       setLoading(false);
     }
@@ -213,167 +211,176 @@ export default function OneOffTasksTable() {
     return <div className="p-6 text-center text-red-500">{error}</div>;
   }
 
-  if (!oneOffTasks.length) {
-    return <div className="p-6 text-center">No one-off tasks found.</div>;
-  }
+ 
 
-  return (
-    // *** NEW: Outer wrapper for vertical scrolling ***
-    // Adjust max-h-[70vh] (70% of viewport height) or use a fixed pixel value like max-h-[600px]
+
+
+
+  if (oneOffTasks.length !=0)  return <div className="p-6 text-center text-gray-500 dark:text-gray-400">Add a Task then it will appear.</div>;
+    
+  
+  else{
+    return (
+          // Adjust max-h-[70vh] (70% of viewport height) or use a fixed pixel value like max-h-[600px]
     <div className="overflow-y-auto max-h-[70vh] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-      {/* Existing wrapper for horizontal scrolling */}
-      <div className="max-w-full overflow-x-auto">
-        {/* Apply min-width to ensure table layout consistency */}
-        <div className="min-w-[1100px] align-middle inline-block">
-          <Table>
-            {/* Table Header */}
-            <TableHeader>
-              {/* *** MODIFIED: Added sticky classes and background to TableRow *** */}
-              <TableRow className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableCell
-                  isHeader
-                  // Use bg-inherit if you want cell background to match row exactly,
-                  // or specify the same bg as the row for consistency.
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Title & ID
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Description
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Deadline
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Duration
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Constraint
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Category
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
-                >
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHeader>
+    {/* Existing wrapper for horizontal scrolling */}
+    <div className="max-w-full overflow-x-auto">
+      {/* Apply min-width to ensure table layout consistency */}
+      <div className="min-w-[1100px] align-middle inline-block">
+        <Table>
+          {/* Table Header */}
+          <TableHeader>
+            {/* *** MODIFIED: Added sticky classes and background to TableRow *** */}
+            <TableRow className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <TableCell
+                isHeader
+                // Use bg-inherit if you want cell background to match row exactly,
+                // or specify the same bg as the row for consistency.
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Title & ID
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Description
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Deadline
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Duration
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Constraint
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Category
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-600 text-left text-xs uppercase tracking-wider dark:text-gray-300"
+              >
+                Actions
+              </TableCell>
+            </TableRow>
+          </TableHeader>
 
-            {/* Table Body */}
-            <TableBody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
-              {oneOffTasks.map((task, index) => {
-                const taskId = getTaskId(task);
-                const constraintInfo = getConstraintInfo(task.constraint); // Get constraint info once
-                return (
-                  <TableRow key={taskId || `task-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    {/* Title & ID Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
-                           <DocumentTextIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          {/* Table Body */}
+          <TableBody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            
+            {oneOffTasks.map((task, index) => {
+              const taskId = getTaskId(task);
+              const constraintInfo = getConstraintInfo(task.constraint); // Get constraint info once
+              return (
+                <TableRow key={taskId || `task-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  {/* Title & ID Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                         <DocumentTextIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm dark:text-white">
+                          {task.title || "Untitled Task"}
                         </div>
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm dark:text-white">
-                            {task.title || "Untitled Task"}
-                          </div>
-                          <div className="text-gray-500 text-xs dark:text-gray-400">
-                             ID: {taskId ?? 'N/A'} {/* Use nullish coalescing */}
-                          </div>
+                        <div className="text-gray-500 text-xs dark:text-gray-400">
+                           ID: {taskId ?? 'N/A'} {/* Use nullish coalescing */}
                         </div>
                       </div>
-                    </TableCell>
+                    </div>
+                  </TableCell>
 
-                    {/* Description Cell */}
-                    <TableCell className="px-5 py-4 max-w-xs"> {/* Allow wrapping */}
-                        <p className="text-gray-600 text-sm dark:text-gray-300 line-clamp-2" title={task.description}> {/* Limit lines, show full on hover */}
-                          {task.description || <span className="text-gray-400 italic">No description</span>}
-                        </p>
-                    </TableCell>
+                  {/* Description Cell */}
+                  <TableCell className="px-5 py-4 max-w-xs"> {/* Allow wrapping */}
+                      <p className="text-gray-600 text-sm dark:text-gray-300 line-clamp-2" title={task.description}> {/* Limit lines, show full on hover */}
+                        {task.description || <span className="text-gray-400 italic">No description</span>}
+                      </p>
+                  </TableCell>
 
-                    {/* Deadline Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                       <div className="flex items-center gap-1.5">
-                            <CalendarIcon className="h-4 w-4 text-gray-400" />
-                            <span>{formatDateTime(task.deadline)}</span>
-                       </div>
-                    </TableCell>
+                  {/* Deadline Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                     <div className="flex items-center gap-1.5">
+                          <CalendarIcon className="h-4 w-4 text-gray-400" />
+                          <span>{formatDateTime(task.deadline)}</span>
+                     </div>
+                  </TableCell>
 
-                    {/* Duration Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                       <div className="flex items-center gap-1.5">
-                            <ClockIcon className="h-4 w-4 text-gray-400" />
-                            <span>{formatDuration(task.duration_minutes)}</span>
-                        </div>
-                    </TableCell>
+                  {/* Duration Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                     <div className="flex items-center gap-1.5">
+                          <ClockIcon className="h-4 w-4 text-gray-400" />
+                          <span>{formatDuration(task.duration_minutes)}</span>
+                      </div>
+                  </TableCell>
 
-                    {/* Constraint Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap text-sm">
-                       <Badge
+                  {/* Constraint Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap text-sm">
+                     <Badge
+                        size="sm"
+                        color={constraintInfo.color as any} // Cast if necessary for your Badge component
+                     >
+                        {constraintInfo.label}
+                     </Badge>
+                  </TableCell>
+
+                  {/* Category Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap text-sm">
+                      {task.category_id ? (
+                      <Badge size="sm" color="info">
+                          {/* You might want to fetch category names later */}
+                          Category #{task.category_id}
+                      </Badge>
+                      ) : (
+                      <span className="text-gray-400 text-xs italic">None</span>
+                      )}
+                  </TableCell>
+
+                  {/* Actions Cell */}
+                  <TableCell className="px-5 py-4 whitespace-nowrap text-sm font-medium">
+                     <Button
+                          variant="destructive"
                           size="sm"
-                          color={constraintInfo.color as any} // Cast if necessary for your Badge component
-                       >
-                          {constraintInfo.label}
-                       </Badge>
-                    </TableCell>
-
-                    {/* Category Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap text-sm">
-                        {task.category_id ? (
-                        <Badge size="sm" color="info">
-                            {/* You might want to fetch category names later */}
-                            Category #{task.category_id}
-                        </Badge>
-                        ) : (
-                        <span className="text-gray-400 text-xs italic">None</span>
-                        )}
-                    </TableCell>
-
-                    {/* Actions Cell */}
-                    <TableCell className="px-5 py-4 whitespace-nowrap text-sm font-medium">
-                       <Button
-                            variant="destructive"
-                            size="sm"
-                            disabled={deleting === taskId || !taskId} // Disable if no ID or deleting
-                            onClick={() => {
-                                if (!taskId) {
-                                alert("Cannot delete task: Task ID is missing.");
-                                return;
-                                }
-                                if (window.confirm(`Are you sure you want to delete task "${task.title}" (ID: ${taskId})?`)) {
-                                handleDeleteTask(taskId);
-                                }
-                            }}
-                            className="inline-flex items-center gap-1.5" // Use inline-flex
-                        >
-                            <TrashIcon className="h-4 w-4" />
-                            {deleting === taskId ? 'Deleting...' : 'Delete'}
-                        </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                          disabled={deleting === taskId || !taskId} // Disable if no ID or deleting
+                          onClick={() => {
+                              if (!taskId) {
+                              alert("Cannot delete task: Task ID is missing.");
+                              return;
+                              }
+                              if (window.confirm(`Are you sure you want to delete task "${task.title}" (ID: ${taskId})?`)) {
+                              handleDeleteTask(taskId);
+                              }
+                          }}
+                          className="inline-flex items-center gap-1.5" // Use inline-flex
+                      >
+                          <TrashIcon className="h-4 w-4" />
+                          {deleting === taskId ? 'Deleting...' : 'Delete'}
+                      </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     </div>
-  );
+  </div>
+);
+    
+
+    
+  }
 }

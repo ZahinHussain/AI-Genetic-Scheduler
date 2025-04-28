@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
@@ -8,10 +8,67 @@ import Label from "../form/Label";
 
 export default function UserPreferencesCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving preferences...");
-    closeModal();
+  const [preferences, setPreferences] = useState({
+    startTime: "08:00 AM",
+    endTime: "05:00 PM",
+  });
+
+  // Fetch user preferences from the API
+  useEffect(() => {
+    fetchPreferences();
+  }, []);
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await fetch("api/settings/preferences", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch preferences");
+      }
+      const data = await response.json();
+      setPreferences({
+        startTime: data.start_time,
+        endTime: data.end_time,
+      });
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch("api/settings/preferences", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+
+        },
+        body: JSON.stringify({
+          start_time: preferences.startTime,
+          end_time: preferences.endTime,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update preferences");
+      }
+      console.log("Preferences updated successfully");
+      closeModal();
+      await fetchPreferences();
+    } catch (error) {
+      console.error("Error updating preferences:", error);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setPreferences((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   return (
@@ -29,7 +86,7 @@ export default function UserPreferencesCard() {
                   Start Time Preference
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  08:00 AM
+                  {preferences.startTime}
                 </p>
               </div>
 
@@ -38,7 +95,7 @@ export default function UserPreferencesCard() {
                   End Time Preference
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  05:00 PM
+                  {preferences.endTime}
                 </p>
               </div>
             </div>
@@ -82,12 +139,22 @@ export default function UserPreferencesCard() {
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
                   <Label>Start Time Preference</Label>
-                  <Input type="text" defaultValue="08:00 AM" />
+                  <Input 
+                    type="time" 
+                    name="startTime"
+                    value={preferences.startTime} 
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div>
                   <Label>End Time Preference</Label>
-                  <Input type="text" defaultValue="05:00 PM" />
+                  <Input 
+                              type="time" 
+                    name="endTime"
+                    value={preferences.endTime} 
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
             </div>

@@ -246,13 +246,24 @@ func Signup(c *gin.Context) {
 		"INSERT INTO \"Users\" (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING user_id",
 		user.Email, hashedPassword, insertTime,
 	).Scan(&userID)
-
 	if err != nil {
 		log.Printf("ERROR: Signup: Database error creating user: %v", err) // Keep as ERROR
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return
 	}
-	log.Printf("[DEBUG] Signup: User %s created successfully with UserID: %d", user.Email, userID) // Added debug log
+
+	// Create default user preferences - fixed query to not attempt to scan result when none is returned
+	_, err = database.Exec(
+		"INSERT INTO \"UserPreferences\" (user_id) VALUES ($1)",
+		userID,
+	)
+	if err != nil {
+		log.Printf("ERROR: Signup: Database error creating user preferences: %v", err) // Keep as ERROR
+		// Note: User is created but preferences failed. Consider whether to delete the user or handle this case.
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error setting up user preferences"})
+		return
+	}
+	log.Printf("[DEBUG] Signup: User %s created successfully with UserID: %d and default preferences", user.Email, userID) // Updated debug log
 
 	// Generate JWT token
 	token, err := generateJWT(userID, user.Email)
@@ -272,6 +283,7 @@ func Signup(c *gin.Context) {
 		Email:     user.Email,
 		CreatedAt: insertTime, // Use the time when it was inserted
 	}
+
 	log.Printf("[DEBUG] Signup: Sending 201 Created response for UserID %d", userID) // Added debug log
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully",

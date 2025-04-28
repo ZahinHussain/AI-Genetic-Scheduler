@@ -40,14 +40,7 @@ const formatTime = (timeString: string): string => {
 };
 
 // Helper function to format date
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-};
+
 
 // Common constraint types to display more user-friendly labels
 const constraintTypes: Record<string, { label: string, color: string }> = {
@@ -59,23 +52,8 @@ const constraintTypes: Record<string, { label: string, color: string }> = {
   "": { label: "No Constraints", color: "default" }
 };
 
-// Sample test data in case the API fails
-const sampleData: RecurringTask[] = [
-  {
-    recurring_task_id: 2,
-    user_id: 1,
-    start_date: "Mon",
-    end_date: "Mon",
-    event_start_time: "09:00:00",
-    event_end_time: "10:30:00",
-    category_id: null,
-    constraint: "fixed",
-    title: "Weekly Team Meeting",
-    description: "Regular synchronization meeting with the development team",
-    created_at: "2025-04-13T13:50:47.305735Z",
-    updated_at: "2025-04-13T13:50:47.305735Z"
-  }
-];
+
+
 
 export default function RecurringTasksTable() {
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
@@ -86,8 +64,7 @@ export default function RecurringTasksTable() {
   const fetchRecurringTasks = async () => {
     try {
       setLoading(true);
-      const baseUrlHost = process.env.NEXT_PUBLIC_API_HOST || 'localhost';
-      const baseUrlPort = process.env.NEXT_PUBLIC_API_PORT || '8080';
+    
       
       // Get JWT token from localStorage
       const token = localStorage.getItem('token');
@@ -124,21 +101,19 @@ export default function RecurringTasksTable() {
       } else if (data && typeof data === 'object') {
         // If the response is an object with recurring tasks directly
         const tasks = Object.values(data).flat();
-        if (Array.isArray(tasks) && tasks.length > 0 && 'recurring_task_id' in tasks[0]) {
-          setRecurringTasks(tasks as RecurringTask[]);
-        } else {
+       
           console.warn("Unexpected response format", data);
-          setRecurringTasks(sampleData); // Fallback to sample data
-        }
+
+        
       } else {
         console.warn("Unexpected response format", data);
-        setRecurringTasks(sampleData); // Fallback to sample data
+
       }
     } catch (err) {
       console.error('Failed to fetch recurring tasks:', err);
       setError('Failed to load recurring tasks. Please try again later.');
       // Use sample data in case of API failure for testing purposes
-      setRecurringTasks(sampleData);
+
     } finally {
       setLoading(false);
     }

@@ -119,7 +119,7 @@ func GetCalendarTasks(c *gin.Context) {
 
 // Request structure for binding the JSON body
 type AddCalendarRequest struct {
-	generationId int    `json:"gaid" binding:"required,gt=0"`
+	GenerationId int    `json:"gaid" binding:"required,gt=0"`
 	StartDate    string `json:"startDate" binding:"required"`
 }
 
@@ -153,7 +153,7 @@ func AddScheduledCalendar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
 		return
 	}
-	log.Printf("[DEBUG] AddScheduledCalendar: Request data bound for userID %d - gaid: %d, startDate: %s", userID, req.GAID, req.StartDate)
+	log.Printf("[DEBUG] AddScheduledCalendar: Request data bound for userID %d - gaid: %d, startDate: %s", userID, req.GenerationId, req.StartDate)
 
 	// 3. Validate StartDate format (ensure it's YYYY-MM-DD)
 	// The "2006-01-02" is Go's specific layout string for YYYY-MM-DD parsing.
@@ -184,13 +184,13 @@ func AddScheduledCalendar(c *gin.Context) {
 
 	// Log the values being inserted for debugging
 	log.Printf("[DEBUG] AddScheduledCalendar: Executing INSERT for userID: %d, GAGeneration_id: %d, start_date: %s",
-		userID, req.GAID, req.StartDate)
+		userID, req.GenerationId, req.StartDate)
 
 	// Execute the query using the accessible 'db' connection
-	result, err := database.ExecContext(ctx, query, userID, req.GAID, req.StartDate)
+	result, err := database.ExecContext(ctx, query, userID, req.GenerationId, req.StartDate)
 	if err != nil {
 		// Log database execution errors at ERROR level
-		log.Printf("[ERROR] AddScheduledCalendar: Failed to insert calendar entry for userID %d, gaid %d: %v", userID, req.GAID, err)
+		log.Printf("[ERROR] AddScheduledCalendar: Failed to insert calendar entry for userID %d, gaid %d: %v", userID, req.GenerationId, err)
 
 		// More detailed error message to help diagnose database-specific issues
 		errMsg := fmt.Sprintf("Failed to save calendar entry: %v", err)
@@ -203,20 +203,222 @@ func AddScheduledCalendar(c *gin.Context) {
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		// Log inability to check rows affected as a warning, not a failure
-		log.Printf("[WARN] AddScheduledCalendar: Could not verify rows affected after insert for userID %d, gaid %d: %v", userID, req.GAID, err)
+		log.Printf("[WARN] AddScheduledCalendar: Could not verify rows affected after insert for userID %d, gaid %d: %v", userID, req.GenerationId, err)
 	} else if rowsAffected == 0 {
 		// Log 0 rows affected as a potential issue (could be constraint violation or already exists)
-		log.Printf("[WARN] AddScheduledCalendar: INSERT statement affected 0 rows for userID %d, gaid %d. Check constraints or if entry already exists.", userID, req.GAID)
+		log.Printf("[WARN] AddScheduledCalendar: INSERT statement affected 0 rows for userID %d, gaid %d. Check constraints or if entry already exists.", userID, req.GenerationId)
 		// Depending on requirements, you might return an error here or a specific message
 		// c.JSON(http.StatusConflict, gin.H{"error": "Calendar entry might already exist or constraints prevent insertion"})
 		// return
 	} else {
-		log.Printf("[DEBUG] AddScheduledCalendar: Insert successful for userID %d, gaid %d. Rows affected: %d", userID, req.GAID, rowsAffected)
+		log.Printf("[DEBUG] AddScheduledCalendar: Insert successful for userID %d, gaid %d. Rows affected: %d", userID, req.GenerationId, rowsAffected)
 	}
 
 	// 6. Return success response
 	log.Printf("[DEBUG] AddScheduledCalendar: Successfully added calendar entry for userID %d.", userID)
 	c.JSON(http.StatusCreated, gin.H{"message": "Calendar entry added successfully"})
+}
+
+type DeleteCalendarRequest struct {
+	CalendarID int `json:"calendar_id" binding:"required,gt=0"`
+}
+
+// DeleteCalendarEntry handles deletion of a calendar entry
+func DeleteCalendarEntry(c *gin.Context) {
+	// Enhanced debugging: Log start and client IP
+	log.Printf("[DEBUG] DeleteCalendarEntry: Request received from %s", c.ClientIP())
+
+	// 1. Get User ID from context (set by auth middleware)
+	userIDInter, exists := c.Get("userID")
+	if !exists {
+		log.Printf("[DEBUG] DeleteCalendarEntry: userID not found in context. Auth has failed.")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Type assert and validate the userID
+	userID, ok := userIDInter.(int)
+	if !ok || userID <= 0 {
+		log.Printf("[DEBUG] DeleteCalendarEntry: userID is not a valid integer or is non-positive. Got: %T, Value: %v", userIDInter, userIDInter)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	log.Printf("[DEBUG] DeleteCalendarEntry: Processing request for userID: %d", userID)
+
+	// 2. Bind JSON request body to the struct
+	var req DeleteCalendarRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Log binding errors at DEBUG level as they are client-side issues
+		log.Printf("[DEBUG] DeleteCalendarEntry: Invalid JSON data for userID %d: %v", userID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+	log.Printf("[DEBUG] DeleteCalendarEntry: Request data bound for userID %d - calendar_id: %d", userID, req.CalendarID)
+
+	// 3. Get database connection
+	database := db.GetDB()
+	if database == nil {
+		// Log database connection errors at ERROR level
+		log.Printf("[ERROR] DeleteCalendarEntry: Failed to get database connection for userID %d", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
+		return
+	}
+
+	ctx := c.Request.Context() // Use request context for potential cancellation
+
+	// 4. Check if the calendar entry exists and belongs to the user
+
+	checkQuery := `
+		SELECT EXISTS(
+			SELECT 1 FROM "Calendars" 
+			WHERE "calendar_id" = $1 AND "user_id" = $2
+		)
+	`
+	err := database.QueryRowContext(ctx, checkQuery, req.CalendarID, userID).Scan(&exists)
+	if err != nil {
+		log.Printf("[ERROR] DeleteCalendarEntry: Failed to check if calendar entry exists for userID %d, calendar_id %d: %v", userID, req.CalendarID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify calendar entry"})
+		return
+	}
+
+	if !exists {
+		log.Printf("[DEBUG] DeleteCalendarEntry: Calendar entry with ID %d not found for userID %d or does not belong to this user", req.CalendarID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar entry not found or access denied"})
+		return
+	}
+
+	// 5. Delete the calendar entry
+	deleteQuery := `DELETE FROM "Calendars" WHERE "calendar_id" = $1 AND "user_id" = $2`
+	log.Printf("[DEBUG] DeleteCalendarEntry: Executing DELETE for calendar_id: %d, userID: %d", req.CalendarID, userID)
+
+	result, err := database.ExecContext(ctx, deleteQuery, req.CalendarID, userID)
+	if err != nil {
+		log.Printf("[ERROR] DeleteCalendarEntry: Failed to delete calendar entry for userID %d, calendar_id %d: %v", userID, req.CalendarID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to delete calendar entry: %v", err)})
+		return
+	}
+
+	// 6. Check rows affected and log appropriately
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[WARN] DeleteCalendarEntry: Could not verify rows affected after delete for userID %d, calendar_id %d: %v", userID, req.CalendarID, err)
+	} else if rowsAffected == 0 {
+		log.Printf("[WARN] DeleteCalendarEntry: DELETE statement affected 0 rows for userID %d, calendar_id %d.", userID, req.CalendarID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar entry not found or already deleted"})
+		return
+	} else {
+		log.Printf("[DEBUG] DeleteCalendarEntry: Delete successful for userID %d, calendar_id %d. Rows affected: %d", userID, req.CalendarID, rowsAffected)
+	}
+
+	// 7. Return success response
+	log.Printf("[DEBUG] DeleteCalendarEntry: Successfully deleted calendar entry %d for userID %d.", req.CalendarID, userID)
+	c.JSON(http.StatusOK, gin.H{"message": "Calendar entry deleted successfully"})
+}
+
+func GetGACalendar(c *gin.Context) {
+	// Enhanced debugging
+	log.Printf("[DEBUG] GetGACalendar: Request received from %s", c.ClientIP())
+
+	// 1. Get User ID from context (set by auth middleware)
+	userIDInter, exists := c.Get("userID")
+	if !exists {
+		log.Printf("[DEBUG] GetGACalendar: userID not found in context. Auth has failed.")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Type assert and validate the userID
+	userID, ok := userIDInter.(int)
+	if !ok || userID <= 0 {
+		log.Printf("[DEBUG] GetGACalendar: userID is not a valid integer or is non-positive. Got: %T, Value: %v", userIDInter, userIDInter)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	log.Printf("[DEBUG] GetGACalendar: Processing request for userID: %d", userID)
+
+	// SQL query to get calendar entries for the user
+	query := `
+		SELECT 
+			calendar_id,
+			user_id,
+			"GAGeneration_id",
+			start_date,
+			created_at
+		FROM "Calendars" 
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	// Get database connection
+	database := db.GetDB()
+	if database == nil {
+		log.Printf("[ERROR] GetGACalendar: Failed to get database connection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
+		return
+	}
+
+	// Execute the query
+	rows, err := database.QueryContext(c.Request.Context(), query, userID) // Use QueryContext with the actual userID
+	if err != nil {
+		log.Printf("[ERROR] GetGACalendar: Query failed for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query calendar entries"})
+		return
+	}
+	defer rows.Close()
+
+	// Slice to hold the results
+	type CalendarEntry struct {
+		CalendarID     int       `json:"calendar_id"`
+		UserID         int       `json:"user_id"`
+		GAGenerationID int       `json:"GAGeneration_id"`
+		StartDate      string    `json:"start_date"`
+		CreatedAt      time.Time `json:"created_at"`
+	}
+
+	var calendars []CalendarEntry
+
+	// Iterate over the result set
+	for rows.Next() {
+		var entry CalendarEntry
+		var createdAt sql.NullTime
+		var startDate sql.NullString
+
+		if err := rows.Scan(
+			&entry.CalendarID,
+			&entry.UserID,
+			&entry.GAGenerationID,
+			&startDate,
+			&createdAt,
+		); err != nil {
+			log.Printf("[ERROR] GetGACalendar: Failed to scan row for user %d: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading calendar entries"})
+			return
+		}
+
+		// Handle null values
+		if createdAt.Valid {
+			entry.CreatedAt = createdAt.Time
+		}
+		if startDate.Valid {
+			entry.StartDate = startDate.String
+		}
+
+		calendars = append(calendars, entry)
+	}
+
+	// Check for errors that may have occurred during iteration
+	if err = rows.Err(); err != nil {
+		log.Printf("[ERROR] GetGACalendar: Rows iteration error for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading calendar entries"})
+		return
+	}
+
+	log.Printf("[DEBUG] GetGACalendar: Found %d calendar entries for user %d", len(calendars), userID)
+
+	// Return the calendar entries as a JSON response
+	c.JSON(http.StatusOK, gin.H{
+		"calendar_entries": calendars,
+	})
 }
 
 // SetupRoutes configures the API routes for calendar functionality
@@ -227,5 +429,7 @@ func SetupRoutes(router *gin.Engine) {
 
 	// Calendar endpoints
 	calendarGroup.GET("", GetCalendarTasks)
-	calendarGroup.POST("", AddScheduledCalendar) // Add a new endpoint for adding scheduled calendar tasks
+	calendarGroup.POST("", AddScheduledCalendar)  // Add a new endpoint for adding scheduled calendar tasks
+	calendarGroup.DELETE("", DeleteCalendarEntry) // Add endpoint for deleting calendar entries
+	calendarGroup.GET("/ga", GetGACalendar)       // Add endpoint for getting GA calendar entries
 }

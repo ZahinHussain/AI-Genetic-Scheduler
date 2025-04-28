@@ -56,6 +56,9 @@ type GAResponse struct {
 	Schedule     json.RawMessage `json:"schedule"`      // To embed the raw JSON from jsonResponse
 }
 
+
+
+
 // TaskRequest represents the JSON structure for the GA route request
 
 // RunGA handles the request to run the genetic algorithm with the provided tasks
@@ -270,9 +273,6 @@ func createGAGenerationRecord(userID int) (int, error) {
 	return gaGenerationID, nil
 }
 
-func addToCalender() {
-
-}
 
 // SetupRoutes configures the GA routes
 func SetupRoutes(router *gin.Engine) {

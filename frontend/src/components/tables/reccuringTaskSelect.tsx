@@ -54,10 +54,6 @@ const constraintTypes: Record<string, { label: string, color: string }> = {
 
 
 
-const sampleData: RecurringTask[] = [
-    { recurring_task_id: 2, user_id: 1, start_date: "Mon", end_date: "Mon", event_start_time: "09:00:00", event_end_time: "10:30:00", category_id: null, constraint: "fixed", title: "Weekly Team Meeting", description: "Regular synchronization meeting", created_at: "...", updated_at: "..." },
-    { recurring_task_id: 3, user_id: 1, start_date: "Wed", end_date: "Wed", event_start_time: "14:00:00", event_end_time: "15:00:00", category_id: 1, constraint: "flexible", title: "Project Brainstorm", description: "Discuss new project ideas", created_at: "...", updated_at: "..." }
-];
 
 
 // --- Component Props ---
@@ -101,12 +97,12 @@ export default function RecurringTasksTable({
              setRecurringTasks(tasks);
          } else {
              console.warn("No tasks found or unexpected format, using sample data", data);
-             setRecurringTasks(sampleData);
+
          }
        } catch (err) {
          console.error('Failed to fetch recurring tasks:', err);
          setError('Failed to load recurring tasks. Displaying sample data.');
-         setRecurringTasks(sampleData);
+
        } finally {
          setLoading(false);
        }
@@ -177,7 +173,7 @@ export default function RecurringTasksTable({
                 <TableCell
                   isHeader
                   className="px-5 py-3 text-start"
-                  style={{ width: '50px' }}
+          
                 >
                   <label htmlFor="select-all" className="sr-only">Select all tasks</label>
                   <input

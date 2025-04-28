@@ -9,15 +9,19 @@ import {
   BoxCubeIcon,
   CalenderIcon,
   ChevronDownIcon,
+
   GridIcon,
+
   HorizontaLDots,
   ListIcon,
-  PageIcon,
-  PieChartIcon,
+
   PlugInIcon,
+
   TableIcon,
+  TrashBinIcon,
   UserCircleIcon,
 } from "../icons/index";
+
 
 
 type NavItem = {
@@ -35,26 +39,33 @@ const navItems: NavItem[] = [
     path: "/calendar",
   },
   {
-    icon: <BoxCubeIcon />, 
+    icon: <TrashBinIcon />,
+    name: "Manage Calendar",
+    path: "/calendar/manage",
+  },
+  {
+    icon: <BoxCubeIcon />,
     name: "Generation",
     path: "/generation",
   },
+
   {
     icon: <ListIcon />,
     name: "Tasks",
     path: "/tasks",
   },
   {
-    icon: <TableIcon />, 
+    icon: <TableIcon />,
     name: "Recurring Tasks",
     path: "/recurring-tasks",
   },
   {
-    icon: <UserCircleIcon />, 
+    icon: <UserCircleIcon />,
     name: "Settings",
     path: "/settings",
   },
 ];
+
 
 // Keeping this array empty as previously requested
 const othersItems: NavItem[] = [];
