@@ -1,7 +1,7 @@
-"use client"
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+"use client";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
@@ -13,34 +13,34 @@ const HomePage: React.FC = () => {
     const checkAuth = async () => {
       try {
         // First try to get user from localStorage
-        const storedUser = localStorage.getItem('user');
-        
+        const storedUser = localStorage.getItem("user");
+
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-        
+
         // Verify authentication with the server
-        const response = await fetch('/api/auth/me', {
-          method: 'GET',
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
           headers: {
-            'Accept': 'application/json'
+            Accept: "application/json",
           },
-          credentials: 'include'
+          credentials: "include",
         });
 
         if (response.ok) {
           const data = await response.json();
           if (data.user) {
             setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem("user", JSON.stringify(data.user));
           }
         } else {
           // Not authenticated, redirect to login
-          router.push('/signin');
+          router.push("/signin");
         }
       } catch (error) {
-        console.error('Authentication error:', error);
-        router.push('/signin');
+        console.error("Authentication error:", error);
+        router.push("/signin");
       } finally {
         setLoading(false);
       }
@@ -51,25 +51,25 @@ const HomePage: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
       });
-      
+
       // Clear local storage
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+
       // Redirect to login
-      router.push('/signin');
+      router.push("/signin");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
           <p className="text-xl">Loading...</p>
         </div>
@@ -78,10 +78,8 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen ">
-
+    <div className="min-h-screen">
       <h1>Home</h1>
- 
     </div>
   );
 };
@@ -94,7 +92,7 @@ const ServerPingTest: React.FC = () => {
   const handlePing = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ping');
+      const response = await fetch("/api/ping");
       if (response.ok) {
         const data = await response.json();
         setPingResponse(data.message);
@@ -103,7 +101,7 @@ const ServerPingTest: React.FC = () => {
         setPingResponse(`Failed: ${response.status} - ${textResponse}`);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       setPingResponse(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -114,12 +112,16 @@ const ServerPingTest: React.FC = () => {
     <div className="mt-2">
       <button
         onClick={handlePing}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+        className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
       >
         Test Connection
       </button>
-      {isLoading && <span className="ml-2 text-sm text-gray-600">Testing...</span>}
-      {pingResponse && <div className="mt-1 text-sm text-gray-800">{pingResponse}</div>}
+      {isLoading && (
+        <span className="ml-2 text-sm text-gray-600">Testing...</span>
+      )}
+      {pingResponse && (
+        <div className="mt-1 text-sm text-gray-800">{pingResponse}</div>
+      )}
     </div>
   );
 };

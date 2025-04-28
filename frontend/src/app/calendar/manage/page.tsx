@@ -3,7 +3,7 @@
 import React from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 
-import TaskList from "@/components/tables/genTable"
+import TaskList from "@/components/tables/genTable";
 
 // Define the expected structure of task data received from the form
 interface TaskFormData {
@@ -14,14 +14,11 @@ interface TaskFormData {
 }
 
 export default function ManageSchedule() {
-
   return (
-    <div className="min-h-screen bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 px-5 py-7 xl:px-10 xl:py-12 rounded-xs">
+    <div className="min-h-screen rounded-xs border border-gray-200 bg-white px-5 py-7 xl:px-10 xl:py-12 dark:border-gray-800 dark:bg-white/[0.03]">
       <PageBreadcrumb pageTitle="Tasks" />
 
       <div className="mt-5">
- 
-
         <div className="mt-6">
           <TaskList />
         </div>

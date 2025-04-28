@@ -1,14 +1,14 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
-import Label from '../Label'; // Assuming Label component exists
-import Input from '../input/InputField'; // Assuming Input component exists
-import DatePicker from '@/components/form/date-picker'; // Assuming DatePicker component exists
-import { TimeIcon } from '../../../icons'; // Assuming TimeIcon path is correct
+import React, { useState, useEffect, useMemo } from "react";
+import Label from "../Label"; // Assuming Label component exists
+import Input from "../input/InputField"; // Assuming Input component exists
+import DatePicker from "@/components/form/date-picker"; // Assuming DatePicker component exists
+import { TimeIcon } from "../../../icons"; // Assuming TimeIcon path is correct
 
 // Helper function to format time as HH:MM (required by input type="time")
 const formatTime = (date) => {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 };
 
@@ -29,9 +29,8 @@ interface TaskInputFormProps {
 export default function TaskInputForm({
   initialTaskData = {}, // Default to empty object if no initial data provided
   onSubmit,
-  submitButtonText = "Add Buffer" // Default button text
+  submitButtonText = "Add Buffer", // Default button text
 }: TaskInputFormProps) {
-
   // Calculate default date (today) and time (+3 hours) only once
   const defaultDateTime = useMemo(() => {
     const now = new Date();
@@ -46,16 +45,20 @@ export default function TaskInputForm({
 
   // --- State for form fields ---
   // Initialize with prop data if available, otherwise use calculated defaults or empty strings
-  const [taskName, setTaskName] = useState(initialTaskData.taskName || '');
-  const [taskCategory, setTaskCategory] = useState(initialTaskData.taskCategory || '');
-  const [time, setTime] = useState(initialTaskData.time || defaultDateTime.time);
+  const [taskName, setTaskName] = useState(initialTaskData.taskName || "");
+  const [taskCategory, setTaskCategory] = useState(
+    initialTaskData.taskCategory || "",
+  );
+  const [time, setTime] = useState(
+    initialTaskData.time || defaultDateTime.time,
+  );
 
   // DatePicker state needs careful handling based on what DatePicker component expects/returns
   // We initialize with initialTaskData.day or the default Date object.
   // The `DatePicker`'s `onChange` might return a string or a Date object array.
   // We store the Date object internally for consistency if possible.
   const [day, setDay] = useState<Date | string | undefined>(
-    initialTaskData.day || defaultDateTime.date
+    initialTaskData.day || defaultDateTime.date,
   );
 
   // --- Handle form submission ---
@@ -63,16 +66,16 @@ export default function TaskInputForm({
     event.preventDefault(); // Prevent default form submission if wrapped in <form>
 
     // Ensure day is in a consistent format (e.g., MM/DD/YYYY string) before submitting
-    let formattedDay = '';
+    let formattedDay = "";
     if (day instanceof Date) {
-        // Format Date object to MM/DD/YYYY
-        const month = String(day.getMonth() + 1).padStart(2, '0');
-        const dateNum = String(day.getDate()).padStart(2, '0');
-        const year = day.getFullYear();
-        formattedDay = `${month}/${dateNum}/${year}`;
-    } else if (typeof day === 'string') {
-        // Assume string is already in the correct format or handle potential parsing/reformatting
-        formattedDay = day; // Or reformat if needed: e.g., reformatDateString(day)
+      // Format Date object to MM/DD/YYYY
+      const month = String(day.getMonth() + 1).padStart(2, "0");
+      const dateNum = String(day.getDate()).padStart(2, "0");
+      const year = day.getFullYear();
+      formattedDay = `${month}/${dateNum}/${year}`;
+    } else if (typeof day === "string") {
+      // Assume string is already in the correct format or handle potential parsing/reformatting
+      formattedDay = day; // Or reformat if needed: e.g., reformatDateString(day)
     }
 
     onSubmit({
@@ -85,7 +88,11 @@ export default function TaskInputForm({
 
   // --- Handle DatePicker changes ---
   // Adjust based on how your DatePicker's onChange works
-  const handleDateChange = (selectedDates: Date[], dateStr: string, instance: any) => {
+  const handleDateChange = (
+    selectedDates: Date[],
+    dateStr: string,
+    instance: any,
+  ) => {
     // Often, selectedDates[0] is the Date object we want
     // dateStr is the formatted string based on dateFormat
     setDay(selectedDates[0] || dateStr); // Prefer Date object if available
@@ -95,9 +102,12 @@ export default function TaskInputForm({
   return (
     // Consider wrapping in a <form> tag if appropriate
     // <form onSubmit={handleSubmit} className="p-4 md:p-6">
-    <div className="p-4 md:p-6"> {/* Added padding for spacing */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-8"> {/* Grid layout */}
-
+    <div className="p-4 md:p-6">
+      {" "}
+      {/* Added padding for spacing */}
+      <div className="mb-8 grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
+        {" "}
+        {/* Grid layout */}
         {/* Input Time */}
         <div>
           <Label htmlFor="input-time">Input Time</Label>
@@ -110,13 +120,11 @@ export default function TaskInputForm({
               onChange={(e) => setTime(e.target.value)} // Update state on change
               className="pr-10"
             />
-            <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
               <TimeIcon />
             </span>
           </div>
         </div>
-
-
         {/* Input Day - Using DatePicker */}
         <div>
           <Label htmlFor="input-day">Input Day</Label>
@@ -136,10 +144,9 @@ export default function TaskInputForm({
             className="dark:bg-dark-900" // Example style
           />
         </div>
-
         {/* Input Task Name */}
         <div>
-          <Label htmlFor="input-task-name">Input    {submitButtonText}Name</Label>
+          <Label htmlFor="input-task-name">Input {submitButtonText}Name</Label>
           <Input
             id="input-task-name"
             type="text"
@@ -148,10 +155,11 @@ export default function TaskInputForm({
             onChange={(e) => setTaskName(e.target.value)} // Update state on change
           />
         </div>
-
         {/* Input Task Category */}
         <div>
-          <Label htmlFor="input-task-category">Input    {submitButtonText} Category</Label>
+          <Label htmlFor="input-task-category">
+            Input {submitButtonText} Category
+          </Label>
           <Input
             id="input-task-category"
             type="text"
@@ -161,13 +169,12 @@ export default function TaskInputForm({
           />
         </div>
       </div>
-
       {/* Submit Button */}
       <div className="flex justify-center">
         <button
           type="button" // Change to type="submit" if wrapped in a <form>
           onClick={handleSubmit} // Call submit handler
-          className="px-4 py-2 bg-gray-200 text-black rounded border border-gray-400 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
+          className="rounded border border-gray-400 bg-gray-200 px-4 py-2 text-black hover:bg-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
         >
           Add {submitButtonText} {/* Use the prop for button text */}
         </button>

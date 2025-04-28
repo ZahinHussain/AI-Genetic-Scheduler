@@ -1,5 +1,11 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 // Define the User type
 export interface User {
@@ -43,10 +49,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (token) {
       // Only store in localStorage if we want token persistence across browser sessions
       // Otherwise, the cookie handles authentication
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem("auth_token", token);
     }
-    
-    localStorage.setItem('user', JSON.stringify(user));
+
+    localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
   };
 
@@ -54,20 +60,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       // Call logout endpoint to clear the cookie
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
       });
-      
+
       // Clear local storage and state
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
       setUser(null);
-      
+
       // Optional: redirect to login page
       // window.location.href = '/signin';
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -75,24 +81,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        credentials: 'include',
+      const response = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem("user", JSON.stringify(data.user));
           setUser(data.user);
         }
       } else {
         // If unauthorized, clear user state
         setUser(null);
-        localStorage.removeItem('user');
+        localStorage.removeItem("user");
       }
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      console.error("Error refreshing user:", error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -103,24 +109,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
-      
+
       try {
         // First try to get the user from localStorage
-        const storedUser = localStorage.getItem('user');
+        const storedUser = localStorage.getItem("user");
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-        
+
         // Then verify with the server (JWT in cookie)
         await refreshUser();
       } catch (error) {
-        console.error('Authentication check error:', error);
+        console.error("Authentication check error:", error);
         setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 

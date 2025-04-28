@@ -18,7 +18,7 @@ export default function SignUpForm() {
   // Form data state - Removed firstName and lastName
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   // Check if user is already authenticated
@@ -26,9 +26,9 @@ export default function SignUpForm() {
     const checkAuth = async () => {
       try {
         // Check if user is already logged in
-        const userData = localStorage.getItem('user');
+        const userData = localStorage.getItem("user");
         if (userData) {
-          router.push('/home');
+          router.push("/home");
           return;
         }
       } catch (error) {
@@ -46,7 +46,7 @@ export default function SignUpForm() {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -91,51 +91,59 @@ export default function SignUpForm() {
       // Payload already only includes email and password
       const requestPayload = {
         email: formData.email,
-        password: formData.password
+        password: formData.password,
       };
 
-      console.log('Sending signup request with payload:', JSON.stringify(requestPayload));
+      console.log(
+        "Sending signup request with payload:",
+        JSON.stringify(requestPayload),
+      );
 
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(requestPayload),
-        credentials: 'include',
+        credentials: "include",
       });
 
-      console.log('Received response with status:', response.status);
+      console.log("Received response with status:", response.status);
       const responseClone = response.clone(); // Clone before reading body
 
       let data;
       try {
         data = await response.json();
-        console.log('Response parsed as JSON:', data);
+        console.log("Response parsed as JSON:", data);
       } catch (jsonError) {
         const textResponse = await responseClone.text();
-        console.error('Failed to parse response as JSON:', jsonError);
-        console.error('Raw response:', textResponse);
-        throw new Error("Server returned an invalid response format. Please try again later.");
+        console.error("Failed to parse response as JSON:", jsonError);
+        console.error("Raw response:", textResponse);
+        throw new Error(
+          "Server returned an invalid response format. Please try again later.",
+        );
       }
 
       if (!response.ok) {
-        throw new Error(data?.error || data?.message || `Signup failed with status ${response.status}`);
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            `Signup failed with status ${response.status}`,
+        );
       }
 
       // Store user data if provided by backend
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('User data stored in localStorage.');
+        localStorage.setItem("user", JSON.stringify(data.user));
+        console.log("User data stored in localStorage.");
       }
 
-      console.log('Signup successful, redirecting to login page');
-      router.push('/signin'); // Redirect to the sign in page after successful signup
-
+      console.log("Signup successful, redirecting to login page");
+      router.push("/signin"); // Redirect to the sign in page after successful signup
     } catch (err: any) {
-      console.error('Signup error:', err);
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error("Signup error:", err);
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -144,14 +152,16 @@ export default function SignUpForm() {
   // Optional: Show a loading indicator while checking auth
   if (isCheckingAuth) {
     return (
-      <div className="flex flex-col flex-1 justify-center items-center min-h-screen">
-        <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
+      <div className="flex min-h-screen flex-1 flex-col items-center justify-center">
+        <p className="text-gray-600 dark:text-gray-400">
+          Checking authentication...
+        </p>
       </div>
     );
   }
   return (
-    <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
+    <div className="no-scrollbar flex w-full flex-1 flex-col overflow-y-auto lg:w-1/2">
+      <div className="mx-auto mb-5 w-full max-w-md sm:pt-10">
         <Link
           href="/"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -160,10 +170,10 @@ export default function SignUpForm() {
           Back to dashboard
         </Link>
       </div>
-      <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
         <div>
           <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
+            <h1 className="text-title-sm sm:text-title-md mb-2 font-semibold text-gray-800 dark:text-white/90">
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -172,7 +182,7 @@ export default function SignUpForm() {
           </div>
           <div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
-              <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
+              <button className="inline-flex items-center justify-center gap-3 rounded-lg bg-gray-100 px-7 py-3 text-sm font-normal text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                 <svg
                   width="20"
                   height="20"
@@ -199,7 +209,7 @@ export default function SignUpForm() {
                 </svg>
                 Sign up with Google
               </button>
-              <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
+              <button className="inline-flex items-center justify-center gap-3 rounded-lg bg-gray-100 px-7 py-3 text-sm font-normal text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                 <svg
                   width="21"
                   className="fill-current"
@@ -218,20 +228,20 @@ export default function SignUpForm() {
                 <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">
+                <span className="bg-white p-2 text-gray-400 sm:px-5 sm:py-2 dark:bg-gray-900">
                   Or
                 </span>
               </div>
             </div>
             {error && (
-              <div className="mb-4 p-3 text-sm bg-red-100 border border-red-200 text-red-600 rounded-lg">
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-100 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
-                 {/* Removed First Name and Last Name Input fields */}
-                 
+                {/* Removed First Name and Last Name Input fields */}
+
                 {/* <!-- Email --> */}
                 <div>
                   <Label htmlFor="email">
@@ -262,7 +272,7 @@ export default function SignUpForm() {
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                      className="absolute top-1/2 right-4 z-30 -translate-y-1/2 cursor-pointer"
                     >
                       {showPassword ? (
                         <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
@@ -275,7 +285,7 @@ export default function SignUpForm() {
                 {/* <!-- Checkbox --> */}
                 <div className="flex items-center gap-3">
                   <Checkbox
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     checked={isChecked}
                     onChange={setIsChecked}
                   />
@@ -294,7 +304,7 @@ export default function SignUpForm() {
                 <div>
                   <button
                     type="submit"
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                    className="bg-brand-500 shadow-theme-xs hover:bg-brand-600 flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium text-white transition"
                     disabled={isLoading}
                   >
                     {isLoading ? "Processing..." : "Sign Up"}
@@ -304,11 +314,11 @@ export default function SignUpForm() {
             </form>
 
             <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
+              <p className="text-center text-sm font-normal text-gray-700 sm:text-start dark:text-gray-400">
                 Already have an account?{" "}
                 <Link
                   href="/signin"
-                  className="ml-1 font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400" // Added ml-1 for spacing
+                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400 ml-1 font-medium" // Added ml-1 for spacing
                 >
                   Sign In
                 </Link>

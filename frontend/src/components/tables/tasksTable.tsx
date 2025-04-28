@@ -12,7 +12,7 @@ interface Task {
   id: number;
   name: string;
   time: string; // e.g., "HH:MM"
-  day: string;  // e.g., "MM/DD/YYYY"
+  day: string; // e.g., "MM/DD/YYYY"
   category: string;
 }
 
@@ -56,7 +56,6 @@ const taskData: Task[] = [
 ];
 
 export default function TaskListTable() {
-
   // Placeholder delete handler function
   const handleDelete = (taskId: number) => {
     console.log(`Attempting to delete task with ID: ${taskId}`);
@@ -68,42 +67,43 @@ export default function TaskListTable() {
   for (const task of taskData) {
     // Create the JSX for each row inside the loop
     tableRows.push(
-      <TableRow key={task.id}> {/* Key is still crucial here */}
+      <TableRow key={task.id}>
+        {" "}
+        {/* Key is still crucial here */}
         {/* ID Cell */}
-        <TableCell className="px-4 py-3 text-gray-800 text-start text-theme-sm dark:text-white/90">
+        <TableCell className="text-theme-sm px-4 py-3 text-start text-gray-800 dark:text-white/90">
           {task.id}
         </TableCell>
         {/* Task Name Cell */}
-        <TableCell className="px-4 py-3 text-gray-800 text-start text-theme-sm dark:text-white/90">
+        <TableCell className="text-theme-sm px-4 py-3 text-start text-gray-800 dark:text-white/90">
           {task.name}
         </TableCell>
         {/* Time Cell */}
-        <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+        <TableCell className="text-theme-sm px-4 py-3 text-start text-gray-500 dark:text-gray-400">
           {task.time}
         </TableCell>
         {/* Day Cell */}
-        <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+        <TableCell className="text-theme-sm px-4 py-3 text-start text-gray-500 dark:text-gray-400">
           {task.day}
         </TableCell>
         {/* Category Cell */}
-        <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+        <TableCell className="text-theme-sm px-4 py-3 text-start text-gray-500 dark:text-gray-400">
           {task.category}
         </TableCell>
         {/* Actions Cell (Delete Button) */}
-        <TableCell className="px-4 py-3 text-center text-theme-sm">
+        <TableCell className="text-theme-sm px-4 py-3 text-center">
           <button
             onClick={() => handleDelete(task.id)}
-            className="px-2 py-1 text-red-600 transition-colors duration-150 border border-red-500 rounded hover:bg-red-100 dark:text-red-400 dark:border-red-400 dark:hover:bg-red-900/30 text-theme-xs"
+            className="text-theme-xs rounded border border-red-500 px-2 py-1 text-red-600 transition-colors duration-150 hover:bg-red-100 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/30"
             aria-label={`Delete task ${task.id}`}
           >
             Delete
           </button>
         </TableCell>
-      </TableRow>
+      </TableRow>,
     );
   }
   // --- End of for loop ---
-
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -112,40 +112,40 @@ export default function TaskListTable() {
           <Table>
             {/* Table Header (remains the same) */}
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-               <TableRow>
+              <TableRow>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[60px]"
+                  className="text-theme-xs w-[60px] px-4 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
                 >
                   ID
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="text-theme-xs px-4 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
                 >
                   Task Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[100px]"
+                  className="text-theme-xs w-[100px] px-4 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
                 >
                   Time
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[120px]"
+                  className="text-theme-xs w-[120px] px-4 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
                 >
                   Day
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                  className="text-theme-xs w-[150px] px-4 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
                 >
                   Category
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-4 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 w-[100px]"
+                  className="text-theme-xs w-[100px] px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400"
                 >
                   Actions
                 </TableCell>

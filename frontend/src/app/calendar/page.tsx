@@ -1,5 +1,4 @@
-
-'use client'; // ← VERY IMPORTANT
+"use client"; // ← VERY IMPORTANT
 
 import Calendar from "@/components/calendar/Calendar";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -33,16 +32,24 @@ export default function CalendarPage() {
 
         // Handle the case where the API returns an object with calendar_tasks array
         let eventsArray = [];
-        
-        if (rawData && rawData.calendar_tasks && Array.isArray(rawData.calendar_tasks)) {
+
+        if (
+          rawData &&
+          rawData.calendar_tasks &&
+          Array.isArray(rawData.calendar_tasks)
+        ) {
           // The data has a calendar_tasks property which is an array
-          console.log("Found calendar_tasks array with", rawData.calendar_tasks.length, "events");
+          console.log(
+            "Found calendar_tasks array with",
+            rawData.calendar_tasks.length,
+            "events",
+          );
           eventsArray = rawData.calendar_tasks;
         } else if (Array.isArray(rawData)) {
           // The data is already an array
           console.log("API returned an array with", rawData.length, "events");
           eventsArray = rawData;
-        } else if (rawData && typeof rawData === 'object') {
+        } else if (rawData && typeof rawData === "object") {
           // The data is a single object, wrap it in an array
           console.log("API returned a single object, wrapping in array");
           eventsArray = [rawData];
@@ -50,11 +57,11 @@ export default function CalendarPage() {
           console.warn("Unexpected API response format:", rawData);
           eventsArray = [];
         }
-        
+
         console.log("Processed events array:", eventsArray);
-        
+
         // Validate the events have required properties
-        const validEvents = eventsArray.filter(event => {
+        const validEvents = eventsArray.filter((event) => {
           if (!event.scheduled_start || !event.scheduled_end || !event.title) {
             console.warn("Event missing required properties:", event);
             return false;
@@ -79,10 +86,12 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading calendar...</p>
+          <div className="border-brand-500 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">
+            Loading calendar...
+          </p>
         </div>
       </div>
     );
@@ -90,11 +99,13 @@ export default function CalendarPage() {
 
   if (error) {
     return (
-      <div className="p-6 text-center bg-red-50 dark:bg-red-900/20 rounded-lg">
-        <p className="text-red-600 dark:text-red-400">Error loading calendar: {error}</p>
-        <button 
+      <div className="rounded-lg bg-red-50 p-6 text-center dark:bg-red-900/20">
+        <p className="text-red-600 dark:text-red-400">
+          Error loading calendar: {error}
+        </p>
+        <button
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600"
+          className="bg-brand-500 hover:bg-brand-600 mt-4 rounded-md px-4 py-2 text-white"
         >
           Retry
         </button>
@@ -108,15 +119,17 @@ export default function CalendarPage() {
       {calendarData && calendarData.length > 0 ? (
         <Calendar data={calendarData} />
       ) : (
-        <div className="p-6 text-center bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-          <p className="text-gray-600 dark:text-gray-300">No calendar events found.</p>
+        <div className="rounded-lg bg-gray-50 p-6 text-center dark:bg-gray-900/20">
+          <p className="text-gray-600 dark:text-gray-300">
+            No calendar events found.
+          </p>
           <p className="mt-2 text-gray-500 dark:text-gray-400">
             Try adding events or check your API endpoint.
           </p>
         </div>
       )}
-      
-      <div className="mt-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-xs text-gray-500">
+
+      <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-500 dark:bg-gray-800/50">
         <p>Debug Info: Found {calendarData?.length || 0} valid events</p>
       </div>
     </div>
