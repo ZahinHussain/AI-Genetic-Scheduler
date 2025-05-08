@@ -47,7 +47,6 @@ func main() {
 	ga.SetupRoutes(router)       // Setup GA routes
 	calendar.SetupRoutes(router) // Setup calendar routes
 	settings.SetupRoutes(router) // Setup settings routes
-
 	// Start server
 	router.Run() // listen and serve on 0.0.0.0:8080
 }

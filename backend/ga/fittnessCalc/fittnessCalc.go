@@ -65,7 +65,7 @@ func SingleTask(temp []int) int {
 		}
 
 	}
-	return (weight * 3)
+	return (weight * 2)
 
 }
 
@@ -93,79 +93,9 @@ func weekendWeight(temp []int) int {
 			weight++
 		}
 	}
-	weight = weight * 4
+	weight = weight * 2
 
 	return weight
-}
-
-func SessionLengthTaskFinder(temp []int) int {
-	var currentLength int
-	var currentTask int
-	var inSession bool
-	var startIndex int
-	var endIndex int
-	var weight int
-	var schedule []taskTimes
-
-	for i := 0; i < len(temp); i++ {
-		if temp[i] != 0 {
-			if !inSession {
-				// Starting a new session
-				currentTask = temp[i]
-				startIndex = i
-				currentLength = 1
-				inSession = true
-			} else if currentTask == temp[i] {
-
-				currentLength++
-
-			} else {
-				// Different task value, end current session
-				endIndex = i
-				//	fmt.Printf("Session ended with length: %d for task: %d (from %d to %d)\n",
-				//	currentLength, currentTask, startIndex, endIndex)
-				schedule = append(schedule, taskTimes{taskName: currentTask, taskLength: currentLength, startSlot: startIndex, endSlot: endIndex})
-				currentTask = temp[i]
-				currentLength = 1
-				startIndex = i
-			}
-		} else {
-			// Value <= 5, end any current session
-			if inSession {
-				endIndex = i
-				weight += calculateSessionWeight(currentLength)
-				schedule = append(schedule, taskTimes{taskName: currentTask, taskLength: currentLength, startSlot: startIndex, endSlot: endIndex})
-				//	fmt.Printf("Session ended with length: %d for task: %d (from %d to %d)\n",
-				//	currentLength, currentTask, startIndex, endIndex)
-				inSession = false
-				currentLength = 0
-				currentTask = 0
-			}
-		}
-	}
-
-	// Handle any ongoing session at the end
-	if inSession {
-		weight += calculateSessionWeight(currentLength)
-		//fmt.Printf("Final session length: %d for task: %d\n", currentLength, currentTask)
-	}
-
-	return weight
-}
-
-func calculateSessionWeight(currentLen int) int {
-	const (
-		MaxNoPenaltyLength = 8
-		WeightMultiplier   = 2
-	)
-
-	if currentLen > MaxNoPenaltyLength {
-
-		penalty := (currentLen - MaxNoPenaltyLength) * WeightMultiplier
-		return penalty
-	}
-
-	return 0
 }
 
 func BreakChecker(temp []int) int {
@@ -208,27 +138,22 @@ func GetSoftConstraints(chromo []int) int {
 
 	// Calculate and add weekend weight
 	weekendWeightValue := weekendWeight(chromo)
-	//fmt.Println("Weekend Weight: " + strconv.Itoa(weekendWeightValue))
+	//	fmt.Println("Weekend Weight: " + strconv.Itoa(weekendWeightValue))
 	softWeight += weekendWeightValue
-
-	// Calculate and add session length weight
-	sessionLengthWeight := SessionLengthTaskFinder(chromo)
-	//	fmt.Println("Session Length Task Finder Weight: " + strconv.Itoa(sessionLengthWeight))
-	softWeight += sessionLengthWeight
 
 	// Calculate and add day check weight
 	sessionDay := DayCheek(chromo)
-	//fmt.Println("Day cheek: " + strconv.Itoa(sessionDay))
+	//	fmt.Println("Day cheek: " + strconv.Itoa(sessionDay))
 	softWeight += sessionDay
 
 	// Calculate and add break task weight
 	breakTask := BreakChecker(chromo)
-	//fmt.Println("Break Task: " + strconv.Itoa(breakTask))
+	//	fmt.Println("Break Task: " + strconv.Itoa(breakTask))
 	softWeight += breakTask
 
 	// Calculate and add single task weight
 	singleTaskWeight := SingleTask(chromo)
-	//fmt.Println("Single Task: " + strconv.Itoa(singleTaskWeight))
+	//	fmt.Println("Single Task: " + strconv.Itoa(singleTaskWeight))
 	softWeight += singleTaskWeight
 
 	// Print and return the total soft constraints weight
