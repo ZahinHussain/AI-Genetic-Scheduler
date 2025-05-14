@@ -39,29 +39,108 @@ export default function UserPreferencesCard() {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      const response = await fetch("api/settings/preferences", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          start_time: preferences.startTime,
-          end_time: preferences.endTime,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to update preferences");
-      }
-      console.log("Preferences updated successfully");
-      closeModal();
-      await fetchPreferences();
-    } catch (error) {
-      console.error("Error updating preferences:", error);
+ // Helper function to convert "HH:MM" (24-hour) to "HH:MM AM/PM"
+const formatToAmPm = (timeString24) => {
+  // Basic validation: Check if input is a string and includes ':'
+  if (typeof timeString24 !== 'string' || !timeString24.includes(':')) {
+    console.warn("Invalid time format provided to formatToAmPm:", timeString24);
+    // Return null or throw an error to indicate failure, allowing handleSave to react
+    return null; 
+  }
+
+  try {
+    const [hoursStr, minutesStr] = timeString24.split(':');
+    let hoursNum = parseInt(hoursStr, 10);
+    const minutes = minutesStr; // Keep as string with padding (e.g., "00", "30")
+
+    // Validate parsed numbers and minutes format
+    if (isNaN(hoursNum) || hoursNum < 0 || hoursNum > 23 || !/^\d{2}$/.test(minutes)) {
+        console.warn("Invalid time components after parsing:", hoursStr, minutesStr);
+        return null; // Indicate failure
     }
+
+    const period = hoursNum >= 12 ? 'PM' : 'AM';
+    let hours12 = hoursNum % 12;
+
+    // Adjust hours for 12 AM (midnight) and 12 PM (noon)
+    if (hours12 === 0) {
+      hours12 = 12; // Midnight (00:xx) and Noon (12:xx) should display as 12
+    }
+
+    // Format hours to always have two digits (e.g., 09, 12)
+    const hoursFormatted = String(hours12).padStart(2, '0');
+
+    // Combine parts into the desired format
+    return `${hoursFormatted}:${minutes} ${period}`;
+
+  } catch (error) {
+    console.error("Error formatting time:", timeString24, error);
+    return null; // Indicate failure on unexpected errors
+  }
+};
+
+
+const handleSave = async () => {
+  console.log("Original Preferences state:", preferences); // Good for debugging internal state
+
+  // --- Conversion Step ---
+  const formattedStartTime = formatToAmPm(preferences.startTime);
+  const formattedEndTime = formatToAmPm(preferences.endTime);
+
+  // --- Validation Step ---
+  // Check if the conversion was successful before proceeding
+  if (formattedStartTime === null || formattedEndTime === null) {
+      console.error("Failed to format start or end time. Aborting save.");
+      // Optionally, show an error message to the user here
+      alert("Invalid time format detected in preferences. Please check your settings.");
+      return; // Stop the function execution
+  }
+
+  // --- Payload Preparation ---
+  const payload = {
+    start_time: formattedStartTime, // Use the formatted value
+    end_time: formattedEndTime,   // Use the formatted value
   };
 
+  console.log("Payload being sent to API:", payload); // Log the exact data being sent
+
+  try {
+    // --- API Call ---
+    const response = await fetch("api/settings/preferences", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        // Add Authorization header if your API requires it
+        // 'Authorization': `Bearer ${your_jwt_token}`
+      },
+      body: JSON.stringify(payload), // Send the JSON payload
+    });
+
+    // --- Response Handling ---
+    if (!response.ok) {
+      // Try to get more error details from the response body
+      let errorDetails = `HTTP status ${response.status}`;
+      try {
+        const errorData = await response.text(); // Or response.json() if the API returns JSON errors
+        errorDetails += ` - ${errorData}`;
+      } catch (e) {
+        // Ignore if reading response body fails
+      }
+      throw new Error(`Failed to update preferences: ${errorDetails}`);
+    }
+
+    console.log("Preferences updated successfully");
+    
+    // --- Post-Success Actions ---
+    closeModal(); // Assuming closeModal is defined in scope
+    await fetchPreferences(); // Assuming fetchPreferences is defined and fetches updated data
+
+  } catch (error) {
+    console.error("Error updating preferences:", error);
+    // Optionally, display a user-friendly error message
+
+  }
+};
   const handleChange = (e) => {
     const { name, value } = e.target;
     setPreferences((prev) => ({
@@ -139,7 +218,7 @@ export default function UserPreferencesCard() {
                 <div>
                   <Label>Start Time Preference</Label>
                   <Input
-                    type="time"
+                    type="text"
                     name="startTime"
                     value={preferences.startTime}
                     onChange={handleChange}
@@ -149,7 +228,7 @@ export default function UserPreferencesCard() {
                 <div>
                   <Label>End Time Preference</Label>
                   <Input
-                    type="time"
+                    type="text"
                     name="endTime"
                     value={preferences.endTime}
                     onChange={handleChange}

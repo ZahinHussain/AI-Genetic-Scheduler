@@ -19,7 +19,7 @@ const (
 	MUTRATE = 50  // Mutation rate
 	DAYLEN  = 48
 
-	NUMGEN           = 500
+	NUMGEN           = 250
 	EliteCount       = 15
 	TournementSelect = 8
 )
@@ -188,51 +188,33 @@ func setFitness(population []CreatePop.Individual) {
 }
 
 func Crossover(offspring []CreatePop.Individual) {
-	for i := 0; i+1 < len(offspring); i += 2 { // Ensure even pairs
-		toff1 := offspring[i]
-		toff2 := offspring[i+1]
+	geneLength := len(offspring[0].Gene) // Assuming all genes have the same length
 
-		numCrossoverPoints, err := random.GetSecureRandom(3) // Limit to 3 crossover points max OR 6 changes
-		if err != nil {
-			continue // Skip if error occurs
-		}
+	for i := 0; i+1 < len(offspring); i += 2 { // Process individuals in pairs
+		parent1 := &offspring[i] // Use pointers to modify directly
+		parent2 := &offspring[i+1]
 
-		for n := 0; n < numCrossoverPoints; n++ {
-			day1, err1 := random.GetSecureRandom(6) // Days 0-6
-			day2, err2 := random.GetSecureRandom(6) // Days 0-6
-			if err1 != nil || err2 != nil {
-				continue
-			}
+		// Choose two distinct crossover points
+		point1, _ := random.GetSecureRandom(geneLength)
+		point2, _ := random.GetSecureRandom(geneLength)
 
-			startPos1 := day1 * DAYLEN
-			startPos2 := day2 * DAYLEN
-
-			crossPoint1, err1 := random.GetSecureRandom(DAYLEN)
-			if err1 != nil {
-				continue
-			}
-
-			rangeLimit := DAYLEN - crossPoint1
-			if rangeLimit <= 0 { // Prevent invalid range
-				continue
-			}
-
-			crossOffset, err2 := random.GetSecureRandom(rangeLimit)
-			if err2 != nil {
-				continue
-			}
-			crossPoint2 := crossPoint1 + crossOffset
-
-			// Perform crossover
-			for j := crossPoint1; j < crossPoint2; j++ {
-				toff1.Gene[startPos1+j], toff2.Gene[startPos2+j] =
-					toff2.Gene[startPos1+j], toff1.Gene[startPos2+j]
+		// Ensure point1 < point2
+		if point1 > point2 {
+			point1, point2 = point2, point1
+		} else if point1 == point2 {
+			// If points are the same, shift one (or skip crossover for this pair)
+			point2 = (point1 + 1) % geneLength
+			if point1 > point2 { // Handle wrap-around case if point1 was last index
+				point1, point2 = point2, point1
 			}
 		}
 
-		// Save modified offspring
-		offspring[i] = toff1
-		offspring[i+1] = toff2
+		// Swap the segment between point1 and point2
+		for j := point1; j < point2; j++ {
+			parent1.Gene[j], parent2.Gene[j] = parent2.Gene[j], parent1.Gene[j]
+		}
+
+		// No need to reassign offspring[i] = parent1 as we modified via pointers
 	}
 }
 
@@ -244,9 +226,9 @@ func mutationSwap(offspring []CreatePop.Individual) {
 	for i := range offspring {
 		for x := 0; x < len(offspring[i].Gene); x++ {
 			prob, _ := random.GetSecureRandom(100)
-			if prob <= MUTRATE {
+			if prob < MUTRATE {
 				swapingGenes(&offspring[i].Gene, x) // Pass entire slice by reference
-				break                               // Avoid redundant modifications within the same loop
+
 			}
 		}
 	}
@@ -254,49 +236,21 @@ func mutationSwap(offspring []CreatePop.Individual) {
 
 func swapingGenes(offspring *[]int, idx int) {
 	randomType := SelectType()
-	end := findEndPoint(*offspring)
 
-	if ValidMutation(idx, end, randomType, offspring) {
-		for i := 0; i < end; i++ {
-			(*offspring)[i] = randomType
-		}
-
+	if ValidMutation(randomType, offspring) {
+		(*offspring)[idx] = randomType
 	}
 
 }
 
 //if it will overright it will not be done so this called vaidlation mutation ok
 
-func ValidMutation(startIndex int, endIndex int, taskId int, offspring *[]int) bool {
+func ValidMutation(i int, offspring *[]int) bool {
 
-	for i := startIndex; i < endIndex; i++ {
-		if (*offspring)[i] == hardGene[i] {
-			return false
-
-		}
+	if (*offspring)[i] == hardGene[i] {
+		return false
 	}
 	return true
-
-}
-
-// keep it 2 hours atm
-func findEndPoint(off []int) int {
-	if len(off) < 8 {
-		return len(off)
-	}
-	return 8
-}
-
-func SelectType() int {
-	tempNum, _ := random.GetSecureRandom(4)
-
-	switch tempNum {
-	case 1:
-		SelectSoft()
-	case 2:
-		SelectHard()
-	}
-	return 0
 }
 
 func SelectSoft() int {
@@ -317,6 +271,20 @@ func SelectHard() int {
 
 	tempNum, _ := random.GetSecureRandom(len(hard) - 1)
 	return hard[tempNum].TaskId
+}
+
+func SelectType() int {
+	tempNum, _ := random.GetSecureRandom(4)
+
+	switch tempNum {
+	case 1:
+		return 0
+	case 2:
+		return SelectSoft()
+	case 3:
+		return SelectHard()
+	}
+	return 0
 }
 
 func GeneToJsonConverter(temp []int, startDay string) []byte {
