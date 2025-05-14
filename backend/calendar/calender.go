@@ -337,16 +337,17 @@ func GetGACalendar(c *gin.Context) {
 	log.Printf("[DEBUG] GetGACalendar: Processing request for userID: %d", userID)
 
 	// SQL query to get calendar entries for the user
+	// Fixed query with proper double quotes around column names to preserve case sensitivity
 	query := `
 		SELECT 
-			calendar_id,
-			user_id,
+			"calendar_id",
+			"user_id",
 			"GAGeneration_id",
-			start_date,
-			created_at
+			"start_date",
+			"created_at"
 		FROM "Calendars" 
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		WHERE "user_id" = $1
+		ORDER BY "created_at" DESC
 	`
 
 	// Get database connection

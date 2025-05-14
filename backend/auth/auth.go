@@ -196,36 +196,37 @@ func setCookie(c *gin.Context, token string) {
 
 // Signup handles user registration
 func Signup(c *gin.Context) {
-	log.Printf("[DEBUG] Signup: Request received.") // Added debug log
+	log.Println("[DEBUG] Signup: Request received.")
 	var user User
+
+	// Bind input JSON to User struct
 	if err := c.ShouldBindJSON(&user); err != nil {
-		log.Printf("[DEBUG] Signup: Failed to bind JSON: %v", err) // Added debug log
+		log.Printf("[DEBUG] Signup: Failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
-	log.Printf("[DEBUG] Signup: Received data for email: %s", user.Email) // Added debug log
+	log.Printf("[DEBUG] Signup: Received data for email: %s", user.Email)
 
-	// Connect to the database
+	// Get DB connection
 	database := db.GetDB()
 	if database == nil {
-		log.Printf("[DEBUG] Signup: Database connection not initialized.") // Added debug log
+		log.Println("[DEBUG] Signup: Database connection not initialized.")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not initialized"})
 		return
 	}
-	log.Printf("[DEBUG] Signup: Database connection obtained.") // Added debug log
+	log.Println("[DEBUG] Signup: Database connection obtained.")
 
 	// Check if user already exists
 	var exists bool
-	log.Printf("[DEBUG] Signup: Checking if user exists: %s", user.Email) // Added debug log
+	log.Printf("[DEBUG] Signup: Checking if user exists: %s", user.Email)
 	err := database.QueryRow("SELECT EXISTS(SELECT 1 FROM \"Users\" WHERE email = $1)", user.Email).Scan(&exists)
 	if err != nil {
-		log.Printf("ERROR: Signup: Database error checking user existence: %v", err) // Keep as ERROR
+		log.Printf("ERROR: Signup: Database error checking user existence: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
-	log.Printf("[DEBUG] Signup: User exists check result for %s: %v", user.Email, exists) // Added debug log
 	if exists {
-		log.Printf("[DEBUG] Signup: User %s already exists. Returning 400.", user.Email) // Added debug log
+		log.Printf("[DEBUG] Signup: User %s already exists. Returning 400.", user.Email)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User with this email already exists"})
 		return
 	}
@@ -233,64 +234,64 @@ func Signup(c *gin.Context) {
 	// Hash the password
 	hashedPassword, err := hashPassword(user.Password)
 	if err != nil {
-		log.Printf("ERROR: Signup: Error hashing password: %v", err) // Keep as ERROR
+		log.Printf("ERROR: Signup: Error hashing password: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing password"})
 		return
 	}
 
-	// Insert the new user
+	// Insert new user
 	var userID int
 	insertTime := time.Now()
-	log.Printf("[DEBUG] Signup: Inserting new user: %s", user.Email) // Added debug log
+	log.Printf("[DEBUG] Signup: Inserting new user: %s", user.Email)
 	err = database.QueryRow(
 		"INSERT INTO \"Users\" (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING user_id",
 		user.Email, hashedPassword, insertTime,
 	).Scan(&userID)
 	if err != nil {
-		log.Printf("ERROR: Signup: Database error creating user: %v", err) // Keep as ERROR
+		log.Printf("ERROR: Signup: Database error creating user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return
 	}
 
-	// Create default user preferences - fixed query to not attempt to scan result when none is returned
+	// Insert default preferences
+	log.Printf("[DEBUG] Signup: Inserting default preferences for user ID %d", userID)
 	_, err = database.Exec(
-		"INSERT INTO \"UserPreferences\" (user_id) VALUES ($1)",
-		userID,
+		`INSERT INTO "UserPreferences" (user_id, start_time, end_time, start_week_day)
+		 VALUES ($1, $2, $3, $4)`,
+		userID, "09:00:00", "21:00:00", "Mon",
 	)
 	if err != nil {
-		log.Printf("ERROR: Signup: Database error creating user preferences: %v", err) // Keep as ERROR
-		// Note: User is created but preferences failed. Consider whether to delete the user or handle this case.
+		log.Printf("ERROR: Signup: Database error creating user preferences: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error setting up user preferences"})
 		return
 	}
-	log.Printf("[DEBUG] Signup: User %s created successfully with UserID: %d and default preferences", user.Email, userID) // Updated debug log
 
-	// Generate JWT token
+	// Generate JWT
 	token, err := generateJWT(userID, user.Email)
 	if err != nil {
-		log.Printf("ERROR: Signup: Error generating token for UserID %d: %v", userID, err) // Keep as ERROR
-		// Note: User is created, but token failed. Consider how to handle this state.
+		log.Printf("ERROR: Signup: Error generating token for UserID %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating authentication token"})
 		return
 	}
 
-	// Set cookie with JWT
+	// Set JWT cookie
 	setCookie(c, token)
 
-	// Prepare response data
+	// Build response
 	responseUser := UserResponse{
 		UserID:    userID,
 		Email:     user.Email,
-		CreatedAt: insertTime, // Use the time when it was inserted
+		CreatedAt: insertTime,
 	}
+	log.Printf("[DEBUG] Signup: User %s created successfully with UserID: %d", user.Email, userID)
 
-	log.Printf("[DEBUG] Signup: Sending 201 Created response for UserID %d", userID) // Added debug log
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully",
-		"token":   token, // Also return token in response for API usage
+		"token":   token,
 		"user":    responseUser,
 	})
 }
+
 
 // Login handles user authentication
 func Login(c *gin.Context) {
