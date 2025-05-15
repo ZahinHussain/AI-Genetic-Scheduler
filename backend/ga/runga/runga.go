@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	P       = 100 // Population size
-	MUTRATE = 50  // Mutation rate
+	P       = 50// Population size
+	MUTRATE = 5  // Mutation rate
 	DAYLEN  = 48
 
-	NUMGEN           = 2
+	NUMGEN           = 100
 	EliteCount       = 15
 	TournementSelect = 8
 )

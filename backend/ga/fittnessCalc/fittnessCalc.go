@@ -26,7 +26,7 @@ type NestTaskSlot struct {
 }
 
 const GENLEN = 336
-const MissTaskPen = 100000
+const MissTaskPen = 100000000000
 
 // Cheeks indvidule days to see if under 12 hours a day then there will be a weight applied
 func DayCheek(temp []int) int {

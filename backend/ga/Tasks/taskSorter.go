@@ -8,33 +8,40 @@ type TaskList struct {
 	TaskSlots       int
 }
 
+
+	var id =0
 // CreateHardList extracts tasks with "hard" constraints from both one-off and recurring tasks
 func CreateHardList(oneOffTasks []OneOffTaskGA, recurringTasks []RecurringTaskGA) []TaskList {
 	var hardList []TaskList
+
 
 	// Process one-off tasks with hard constraints
 	for _, oneOffTask := range oneOffTasks {
 		if oneOffTask.Constraint == "hard" {
 			hardList = append(hardList, TaskList{
-				TaskId:          oneOffTask.TaskId,
+				TaskId:          id,
 				TaskTitle:       oneOffTask.Description,
 				TaskDescription: oneOffTask.Description,
 				TaskSource:      "one_off",
 				TaskSlots:       oneOffTask.Slots,
 			})
+		
 		}
+			id++
 	}
 
 	// Process recurring tasks with hard constraints
 	for _, recurringTask := range recurringTasks {
 		if recurringTask.Constraint == "hard" {
 			hardList = append(hardList, TaskList{
-				TaskId:          recurringTask.TaskId,
+				TaskId:          id,
 				TaskTitle:       recurringTask.Description,
 				TaskDescription: recurringTask.Description,
 				TaskSource:      "recurring",
 				TaskSlots:       recurringTask.Slots,
+			
 			})
+					id++
 		}
 	}
 
@@ -49,12 +56,14 @@ func CreateSoftList(oneOffTasks []OneOffTaskGA, recurringTasks []RecurringTaskGA
 	for _, oneOffTask := range oneOffTasks {
 		if oneOffTask.Constraint == "soft" {
 			softList = append(softList, TaskList{
-				TaskId:          oneOffTask.TaskId,
+				TaskId:          id,
 				TaskTitle:       oneOffTask.Description,
 				TaskDescription: oneOffTask.Description,
 				TaskSource:      "one_off",
 				TaskSlots:       oneOffTask.Slots,
+			
 			})
+					id++
 		}
 	}
 
@@ -62,12 +71,14 @@ func CreateSoftList(oneOffTasks []OneOffTaskGA, recurringTasks []RecurringTaskGA
 	for _, recurringTask := range recurringTasks {
 		if recurringTask.Constraint == "soft" {
 			softList = append(softList, TaskList{
-				TaskId:          recurringTask.TaskId,
+				TaskId:          id,
 				TaskTitle:       recurringTask.Description,
 				TaskDescription: recurringTask.Description,
 				TaskSource:      "recurring",
 				TaskSlots:       recurringTask.Slots,
+			
 			})
+				id++
 		}
 	}
 
